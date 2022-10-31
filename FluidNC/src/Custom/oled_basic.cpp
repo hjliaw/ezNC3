@@ -195,7 +195,7 @@ static void oledUpdate(void* pvParameters) {
 }
 
 void display_init() {
-    init_oled(0x3c, GPIO_NUM_14, GPIO_NUM_13, GEOMETRY_128_64);
+    init_oled(0x3c, GPIO_NUM_0, GPIO_NUM_4, GEOMETRY_128_64);
 
     oled->flipScreenVertically();
     oled->setTextAlignment(TEXT_ALIGN_LEFT);
