@@ -89,11 +89,11 @@ static void oledDRO() {
     //float   wco[MAX_N_AXIS];
 
     oled->setTextAlignment(TEXT_ALIGN_LEFT);
-    oled->setFont(ArialMT_Plain_10);
+    oled->setFont(ArialMT_Plain_16);   // was 10
 
     char axisVal[20];
 
-    oled->drawString(80, 14, "L");  // Limit switch
+    //oled->drawString(80, 14, "L");  // Limit switch
 
     auto n_axis        = config->_axes->_numberAxis;
     auto ctrl_pins     = config->_control;
@@ -102,32 +102,34 @@ static void oledDRO() {
     oled->setTextAlignment(TEXT_ALIGN_RIGHT);
 
     float* print_position = get_mpos();
-    if (bits_are_true(status_mask->get(), RtStatus::Position)) {
+
+/*     if (bits_are_true(status_mask->get(), RtStatus::Position)) {
         oled->drawString(60, 14, "M Pos");
     } else {
         oled->drawString(60, 14, "W Pos");
         mpos_to_wpos(print_position);
     }
+ */
+    mpos_to_wpos(print_position);  // same as ezNC
 
     for (uint8_t axis = X_AXIS; axis < n_axis; axis++) {
-        oled_y_pos = 24 + (axis * 10);
+        oled_y_pos = 19 + (axis * 15);   // a bit cramped
 
-        String axis_letter = String(Machine::Axes::_names[axis]);
-        axis_letter += ":";
+        String axis_letter = "  " + String(Machine::Axes::_names[axis]) + "  ";
         oled->setTextAlignment(TEXT_ALIGN_LEFT);
-        oled->drawString(0, oled_y_pos, axis_letter);  // String('X') + ":");
+        oled->drawString(0, oled_y_pos, axis_letter);
 
         oled->setTextAlignment(TEXT_ALIGN_RIGHT);
         snprintf(axisVal, 20 - 1, "%.3f", print_position[axis]);
-        oled->drawString(60, oled_y_pos, axisVal);
+        oled->drawString( 80, oled_y_pos, axisVal);
 
         //if (bitnum_is_true(limitAxes, axis)) {  // only draw the box if a switch has been defined
         //    draw_checkbox(80, 27 + (axis * 10), 7, 7, limits_check(bitnum_to_mask(axis)));
         //}
     }
 
+  if(0){
     oled_y_pos = 14;
-
     if (config->_probe->exists()) {
         oled->drawString(110, oled_y_pos, "P");
         draw_checkbox(120, oled_y_pos + 3, 7, 7, prb_pin_state);
@@ -141,6 +143,7 @@ static void oledDRO() {
             oled_y_pos += 10;
         }
     }
+  }
 }
 
 static void oledUpdate(void* pvParameters) {
