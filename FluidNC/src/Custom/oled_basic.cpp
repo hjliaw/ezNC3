@@ -198,9 +198,14 @@ static void oledUpdate(void* pvParameters) {
 }
 
 void display_init() {
-    init_oled(0x3c, GPIO_NUM_0, GPIO_NUM_4, GEOMETRY_128_64);
 
+#ifdef BRD_DLC32
+    init_oled(0x3c, GPIO_NUM_0, GPIO_NUM_4, GEOMETRY_128_64);  // DLC32
     oled->flipScreenVertically();
+#else
+    init_oled(0x3c, GPIO_NUM_21, GPIO_NUM_22, GEOMETRY_128_64);  // ezNC
+#endif
+
     oled->setTextAlignment(TEXT_ALIGN_LEFT);
 
     oled->clear();

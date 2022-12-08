@@ -20,11 +20,21 @@
 #    include "oled_io.h"
 #    include "../Uart.h"
 
+#ifdef OLED_096
 SSD1306Wire* oled;
+#else
+SH1106Wire* oled;
+#endif
 
 void init_oled(uint8_t address, pinnum_t sda_gpio, pinnum_t scl_gpio, OLEDDISPLAY_GEOMETRY geometry) {
     Uart0 << "[MSG:INFO Init OLED SDA:gpio." << sda_gpio << " SCL:gpio." << scl_gpio << "]\n";
+
+#ifdef OLED_096
     oled = new SSD1306Wire(address, sda_gpio, scl_gpio, geometry, I2C_ONE, 400000);
+#else
+	oled = new SH1106Wire(address, sda_gpio, scl_gpio, geometry, I2C_ONE, 400000);
+#endif
+
     oled->init();
 }
 #endif
