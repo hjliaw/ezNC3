@@ -138,12 +138,14 @@ namespace Machine {
         // If the system crashes we skip the config file and use the default
         // builtin config.  This helps prevent reset loops on bad config files.
         esp_reset_reason_t reason = esp_reset_reason();
-        if (reason == ESP_RST_PANIC) {
-            log_error("Skipping configuration file due to panic");
-            configOkay = false;
-        } else {
+
+        // HJL: enable machine config for debug  TODO: remove
+        //if (reason == ESP_RST_PANIC) {
+        //    log_error("Skipping configuration file due to panic");
+        //    configOkay = false;
+        //} else {
             configOkay = load(config_filename->get());
-        }
+        //}
 
         if (!configOkay) {
             log_info("Using default configuration");

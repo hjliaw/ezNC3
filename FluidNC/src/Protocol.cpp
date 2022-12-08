@@ -9,6 +9,7 @@
 
 #include "Protocol.h"
 #include "Event.h"
+#include "Eznc.h"
 
 #include "Machine/MachineConfig.h"
 #include "Machine/Homing.h"
@@ -97,18 +98,29 @@ void protocol_main_loop() {
         report_feedback_message(Message::ConfigAlarmLock);
     } else {
         // Perform some machine checks to make sure everything is good to go.
-        if (config->_start->_checkLimits && config->_axes->hasHardLimits()) {
+
+        // *****************************************************************
+        // BAD HACK by HJL: tempararily disable check lmits for fatser debug
+        sys.state = State::Idle;
+
+        if ( 0 && config->_start->_checkLimits && config->_axes->hasHardLimits()) {
             if (limits_get_state()) {
+                log_warn("limit alarm");
                 sys.state = State::Alarm;  // Ensure alarm state is active.
                 report_feedback_message(Message::CheckLimits);
             }
         }
         if (config->_control->startup_check()) {
+            log_warn("foo"); // not tripped
             rtAlarm = ExecAlarm::ControlPin;
         }
 
         if (sys.state == State::Alarm || sys.state == State::Sleep) {
             report_feedback_message(Message::AlarmLock);
+
+            if (sys.state == State::Alarm ) log_warn("state Alarm");
+            if (sys.state == State::Sleep ) log_warn("state Sleep");
+
             sys.state = State::Alarm;  // Ensure alarm state is set.
         } else {
             // Check if the safety door is open.
@@ -126,7 +138,15 @@ void protocol_main_loop() {
     // Primary loop! Upon a system abort, this exits back to main() to reset the system.
     // This is also where the system idles while waiting for something to do.
     // ---------------------------------------------------------------------------------
+    
+    /*
+    cancelJog = 0;
+    clearBtn();
+    */
+   
     for (;;) {
+        eznc_dispatch();
+
         // Poll the input sources waiting for a complete line to arrive
         while (true) {
             Channel* chan = nullptr;

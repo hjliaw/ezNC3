@@ -125,7 +125,7 @@ namespace MotorDrivers {
             log_error(axisName() << " TMC driver not detected - expected 0x" << String(expected, 16) << " got 0x" << String(got, 16));
             return false;
         }
-        log_info(axisName() << " driver test passed");
+        log_info(axisName() << " check version passed");
         return true;
     }
 

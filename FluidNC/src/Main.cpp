@@ -27,11 +27,132 @@
 
 extern void make_user_commands();
 
+// 20221201 HJL: ezNC code
+
+#if 0
+//#ifndef NO_ENCODER
+#include <ESP32Encoder.h>
+ESP32Encoder encUI; 
+#endif
+
+/*
+#define SW1  GPIO_NUM_36     // X
+#define SWL  GPIO_NUM_35     // Y
+#define SWR  GPIO_NUM_34     // Z
+#define ENCA GPIO_NUM_22     // probe-pin brd v2.1
+#define ENCB GPIO_NUM_33     // LCD_RS
+*/
+// ezNC
+#define SW1  GPIO_NUM_34 // encoder-Z (27) 
+#define SWL  GPIO_NUM_14 // was 32, move to encoder pin
+#define SWR  GPIO_NUM_13 // was 33
+#define ENCA GPIO_NUM_36
+#define ENCB GPIO_NUM_39
+
+#if 0
+volatile int clickCounterSW1 = 0;
+volatile int clickCounterSWL = 0;
+volatile int clickCounterSWR = 0;
+
+volatile int  sw1_status;
+volatile int  swL_status;
+volatile int  swR_status;
+
+volatile unsigned long lastReleaseTime = 0;
+
+void IRAM_ATTR handleInterruptSW1() {      // rising only for noisy switch or sensitive i/p
+    unsigned long t, dt;
+    t = millis();
+    dt = t - lastReleaseTime;
+    if( dt < 50 ) return;  // increase from 50 & 150 made it worse ?
+
+    sw1_status = digitalRead(SW1);   // triggered on rising, should be high
+        
+    if( sw1_status == HIGH ){   // btn rlsd
+        lastReleaseTime = t;
+        clickCounterSW1++;
+    }
+}
+
+void IRAM_ATTR handleInterruptSWL() {
+    unsigned long t, dt;
+    t = millis();
+    dt = t - lastReleaseTime;
+    if( dt < 50 ) return;
+
+    swL_status = digitalRead(SWL);
+    if( swL_status == HIGH ){   // btn rlsd
+        lastReleaseTime = t;
+        clickCounterSWL++;
+    }
+}
+
+void IRAM_ATTR handleInterruptSWR() {
+    unsigned long t, dt;
+    t = millis();
+    dt = t - lastReleaseTime;
+    if( dt < 50 ) return;
+    
+    swR_status = digitalRead(SWR);
+    if( swR_status == HIGH ){   // btn rlsd
+        lastReleaseTime = t;
+        clickCounterSWR++;
+    }
+}
+int volatile btnClickedRlsd( void ){   // clicked and released, for UI navigation
+        delay(50);
+        return( (clickCounterSW1 > 0) && digitalRead(SW1) );
+}
+
+int volatile btnClicked( void ){  // no delay
+        return( clickCounterSW1 || clickCounterSWL || clickCounterSWR);
+}
+
+void clearBtn( void ){
+        clickCounterSW1 = 0;
+        clickCounterSWL = 0;
+        clickCounterSWR = 0;
+}
+
+int32_t readEncoder(int a)  // ui encoder, accel not used
+{
+    int32_t r = encUI.getCount();
+
+    if( r != 0 ){    // debounce cheap encoder, works very well
+        delay(150);
+        r = encUI.getCount();
+    }
+    encUI.clearCount();
+
+    return r;
+}
+#endif
+
 void setup() {
+
+#if 0
+    ESP32Encoder::useInternalWeakPullResistors= UP;
+    pinMode( ENCA, INPUT_PULLDOWN);
+    pinMode( ENCB, INPUT_PULLDOWN);
+
+    encUI.clearCount();
+    encUI.attachHalfQuad( ENCA, ENCB );  // duh
+
+    pinMode( SW1, INPUT_PULLUP);
+    attachInterrupt( SW1, handleInterruptSW1, RISING );
+
+    pinMode( SWL, INPUT_PULLUP);
+    attachInterrupt( SWL, handleInterruptSWL, RISING );
+
+    pinMode( SWR, INPUT_PULLUP);
+    attachInterrupt( SWR, handleInterruptSWR, RISING );
+#endif
     try {
         uartInit();       // Setup serial port
         Uart0.println();  // create some white space after ESP32 boot info
 
+        //delay_ms(500);
+        
         // Setup input polling loop after loading the configuration,
         // because the polling may depend on the config
         allChannels.init();

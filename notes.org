@@ -1,0 +1,4 @@
+* can not get my_fnc to work, try starting with FluidNC (already slightly modified) 
+** remove .pio, re-compile OK
+** copy ezNC sources
+        had to add encoder library

@@ -15,6 +15,17 @@
 */
 #include "../Config.h"
 
+extern int jog_axis;
+extern int jog_stepsize;
+extern long run_t0;
+
+volatile int uimenu_active = 0;  // uimenu or dro
+volatile int update_dro = 0;
+volatile int update_menu = 0;
+
+char   ui_txt[4][16];   // todo: change to pointer for scrolling
+int    ui_sel, ui_frame;
+
 #ifdef INCLUDE_OLED_BASIC
 #    include "oled_io.h"
 #    include "../Main.h"  // display_init()
@@ -36,6 +47,7 @@ static void oledRadioInfo() {
     String radio_addr   = "";
     String radio_name   = "";
     String radio_status = "";
+    char js[16];
 
 #    ifdef ENABLE_BLUETOOTH
     if (WebUI::bt_enable->get()) {
@@ -71,7 +83,9 @@ static void oledRadioInfo() {
 #    ifdef ENABLE_BLUETOOTH
         oled->drawString(55, 2, radio_name);
 #    else
-        oled->drawString(55, 2, radio_addr);
+        oled->drawString(50, 2, radio_addr);
+        sprintf( js, "s%d", jog_stepsize );
+        oled->drawString(115, 2, js );
 #    endif
     }
 }
@@ -84,12 +98,29 @@ static void draw_checkbox(int16_t x, int16_t y, int16_t width, int16_t height, b
     }
 }
 
-static void oledDRO() {
+// remove static, need to be called from uI
+void oledDRO() {
     uint8_t oled_y_pos;
-    //float   wco[MAX_N_AXIS];
+    char msg[16];
 
+    oled->clear();
     oled->setTextAlignment(TEXT_ALIGN_LEFT);
-    oled->setFont(ArialMT_Plain_16);   // was 10
+    // Lato has distorted zero !
+    //oled->setFont(Roboto_Mono_Thin_12);  // ugly ?
+    //oled->setFont(DejaVu_Sans_Mono_15);   // OK, zero with a dot
+    oled->setFont(DejaVu_Sans_Mono_14);    // less cramped in ui menu
+
+    oled->drawString(0, 0, state_name());
+    if( sys.state != State::Idle ){  // infile is not a good indicator
+        int progress = 101;
+        if( infile ) progress = infile->percent_complete();
+        oled->drawString(90, 2, String(progress) + "%" );
+        log_warn( "progress " << progress << "% " << String(millis()-run_t0) );
+    }
+    else{
+        sprintf( msg, "jog%d", jog_stepsize );
+        oled->drawString(90, 2, msg );
+    }
 
     char axisVal[20];
 
@@ -103,53 +134,101 @@ static void oledDRO() {
 
     float* print_position = get_mpos();
 
-/*     if (bits_are_true(status_mask->get(), RtStatus::Position)) {
-        oled->drawString(60, 14, "M Pos");
-    } else {
-        oled->drawString(60, 14, "W Pos");
-        mpos_to_wpos(print_position);
-    }
- */
     mpos_to_wpos(print_position);  // same as ezNC
 
+    // only has space for 3-axis ! what about lathe mode ?
     for (uint8_t axis = X_AXIS; axis < n_axis; axis++) {
-        oled_y_pos = 19 + (axis * 15);   // a bit cramped
-
-        String axis_letter = "  " + String(Machine::Axes::_names[axis]) + "  ";
+        oled_y_pos = 19 + (axis * 15);
+        // todo: use alignment
+        String axis_letter = ((axis==jog_axis)? ">":" ") + String(Machine::Axes::_names[axis]) + "  ";
         oled->setTextAlignment(TEXT_ALIGN_LEFT);
         oled->drawString(0, oled_y_pos, axis_letter);
 
         oled->setTextAlignment(TEXT_ALIGN_RIGHT);
-        snprintf(axisVal, 20 - 1, "%.3f", print_position[axis]);
-        oled->drawString( 80, oled_y_pos, axisVal);
-
-        //if (bitnum_is_true(limitAxes, axis)) {  // only draw the box if a switch has been defined
-        //    draw_checkbox(80, 27 + (axis * 10), 7, 7, limits_check(bitnum_to_mask(axis)));
-        //}
-    }
-
-  if(0){
-    oled_y_pos = 14;
-    if (config->_probe->exists()) {
-        oled->drawString(110, oled_y_pos, "P");
-        draw_checkbox(120, oled_y_pos + 3, 7, 7, prb_pin_state);
-        oled_y_pos += 10;
-    }
-    for (auto pin : ctrl_pins->_pins) {
-        char letter = pin->letter();
-        if (!isdigit(letter)) {
-            oled->drawString(110, oled_y_pos, String(letter));
-            draw_checkbox(120, oled_y_pos + 3, 7, 7, pin->get());
-            oled_y_pos += 10;
+        if( gc_state.modal.units == Units::Mm ){
+            snprintf(axisVal, 20 - 1, "%.2f mm", print_position[axis]);
+            oled->drawString( 120, oled_y_pos, axisVal);
+        }
+        else{
+            snprintf(axisVal, 20 - 1, "%.3f in", print_position[axis]/25.4);
+            oled->drawString( 120, oled_y_pos, axisVal);
         }
     }
-  }
+    oled->display();
 }
 
-static void oledUpdate(void* pvParameters) {
-    TickType_t xOledInterval = 1000;  // in ticks (typically ms)
+// a lot of global parameters, todo: make an eznc object ?
 
-    vTaskDelay(2500);
+void oledUI() {
+
+	uint8_t offs;
+	offs = (ui_sel < 0 ) ? 2 : 12;
+
+    oled->clear();
+	//oled->setFont(DejaVu_Sans_Mono_15);
+    oled->setTextAlignment(TEXT_ALIGN_LEFT);  // duh, reason for no show
+	
+	if( ui_sel > 0 ){  // when sel=0,...
+	   //TODO
+	   //if( ui_frame > 0) oled->drawRFrame( 0, 0, 127, 18, 3); // rounded corner
+	    offs = 12;
+	    oled->drawString( 2, 14 +16*(ui_sel-1), ">");
+	}
+
+    for( int i=0; i<4; i++){
+        int x, y;
+        x = (i==0) ? 4 : offs;
+        y = (i==0) ? 1 : i*16;
+        #ifdef UTF8
+    	  oled->drawUTF8(  x,  y, ui_txt[i]);
+        #else
+	      oled->drawString(    x,  y, ui_txt[i]);
+        #endif
+    }
+    
+    oled->display();
+}
+
+
+static void oledUpdate(void* pvParameters) {
+    float old_pos[MAX_N_AXIS];
+
+    vTaskDelay(1000);  // wait for flash screen
+
+    uimenu_active=0;
+    update_dro = 1;
+
+    for(;;){
+        if( uimenu_active ){
+            if( update_menu ) oledUI();
+            update_menu = 0;
+        }
+        else{
+            if( update_dro ) oledDRO();
+            update_dro = 0;
+        }
+
+        if( !uimenu_active ){
+            float* new_pos = get_mpos();
+            //for (int a = X_AXIS; a < n_axis; a++){   // crash ? even with y defined ?
+            for (int a = 0; a < 3; a++){
+                if( fabs( new_pos[a] - old_pos[a] ) > 0.001 ){
+                    old_pos[a] = new_pos[a];
+                    update_dro = 1;
+                }
+            }
+        }
+
+        if (sys.state == State::Idle)
+            vTaskDelay(300);
+        else
+            vTaskDelay(1500);
+    }
+}
+
+#if 0
+static void oledUpdateOLD(void* pvParameters) {
+    TickType_t xOledInterval = 1000;  // in ticks (typically ms)
 
     while (true) {
         uint16_t file_ticker = 0;
@@ -185,36 +264,31 @@ static void oledUpdate(void* pvParameters) {
             xOledInterval = 250;
         } else if (sys.state == State::Alarm) {
             oledRadioInfo();
-            xOledInterval = 1000;
+            xOledInterval = 300;
         } else {
             oledDRO();
             oledRadioInfo();
-            xOledInterval = 1000;
+            xOledInterval = 300;
         }
         oled->display();
 
         vTaskDelay(xOledInterval);
     }
 }
-
-void display_init() {
-
-#ifdef BRD_DLC32
-    init_oled(0x3c, GPIO_NUM_0, GPIO_NUM_4, GEOMETRY_128_64);  // DLC32
-    oled->flipScreenVertically();
-#else
-    init_oled(0x3c, GPIO_NUM_21, GPIO_NUM_22, GEOMETRY_128_64);  // ezNC
 #endif
 
+void display_init() {
+    //init_oled(0x3c, GPIO_NUM_0, GPIO_NUM_4, GEOMETRY_128_64);  // DLC32
+    init_oled(0x3c, GPIO_NUM_21, GPIO_NUM_22, GEOMETRY_128_64);  // ezNC
+
+    //oled->flipScreenVertically();   // no flip for ezNC
     oled->setTextAlignment(TEXT_ALIGN_LEFT);
 
     oled->clear();
-
     oled->setFont(ArialMT_Plain_16);
     oled->drawString(0, 0, "Starting");
     oled->setFont(ArialMT_Plain_24);
-    oled->drawString(0, 20, "FluidNC");
-
+    oled->drawString(0, 20, "ezFluidNC");
     oled->display();
 
     xTaskCreatePinnedToCore(oledUpdate,        // task
@@ -223,18 +297,19 @@ void display_init() {
                             NULL,              // parameters
                             1,                 // priority
                             &oledUpdateTaskHandle,
-                            CONFIG_ARDUINO_RUNNING_CORE  // must run the task on same core
-                                                         // core
+                            0
+                            //CONFIG_ARDUINO_RUNNING_CORE  // must run the task on same core
     );
 }
-#    if 0
-static void oled_show_string(String s) {
+
+#if 0
+void oled_show_string(String s) {
     oled->clear();
     oled->drawString(0, 0, s);
     oled->display();
 }
 
-void display(const char* tag, String s) {
+void display(const char* tag, String s) {  // will capture report with special tags
     if (!strcmp(tag, "IP")) {
         oled_show_string(s);
         return;
@@ -247,5 +322,6 @@ void display(const char* tag, String s) {
         oled_show_string(s);
     }
 }
-#    endif
+#endif
+
 #endif

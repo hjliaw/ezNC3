@@ -44,7 +44,7 @@ namespace MotorDrivers {
         // Display the stepper library version message once, before the first
         // TMC config message.  Link is NULL for the first TMC instance.
         if (!link) {
-            log_debug("TMCStepper Library Ver. 0x" << String(TMCSTEPPER_VERSION, HEX));
+            log_debug("   TMCStepper Library Ver. 0x" << String(TMCSTEPPER_VERSION, HEX));
         }
 
         config_message();
@@ -65,10 +65,19 @@ namespace MotorDrivers {
 
     /*
     This is the startup message showing the basic definition
+
+    [MSG:INFO:     tmc_5160 Step:I2SO.3 Dir:I2SO.4 CS:NO_PIN Disable:NO_PIN Index:1 R:0.075]
     */
     void TrinamicSpiDriver::config_message() {
-        log_info("    " << name() << " Step:" << _step_pin.name() << " Dir:" << _dir_pin.name() << " CS:" << _cs_pin.name()
-                        << " Disable:" << _disable_pin.name() << " Index:" << _spi_index << " R:" << _r_sense);
+        log_info("  " << name()
+				 << " Step:"    << _step_pin.name()
+				 << " Dir:"     << _dir_pin.name()
+				 << " CS:"      << _cs_pin.name()
+				 << " Disable:" << _disable_pin.name()
+				 << " Index:"   << _spi_index
+				 << " R:"       << _r_sense);
+		log_info("  "
+				 << " run_amp:"    << _run_current );
     }
 
     uint8_t TrinamicSpiDriver::toffValue() {

@@ -56,6 +56,19 @@ namespace MotorDrivers {
                 tmc5160->en_pwm_mode(true);
                 tmc5160->pwm_autoscale(true);
                 tmc5160->diag1_stall(false);
+
+                // HJL: fix motor off surge current (copying from ezNC)
+                // TODO: figure out which one does the trick
+                
+                tmc5160->toff(4);
+                tmc5160->blank_time(24);
+                tmc5160->TCOOLTHRS(0xFFFFF); // 20bit max
+                tmc5160->THIGH(0);
+                tmc5160->semin(5);
+                tmc5160->semax(2);
+                tmc5160->sedn(0b01);
+                tmc5160->sgt(15);     // -64..+63
+                
                 break;
             case TrinamicMode ::CoolStep:
                 log_debug(axisName() << " Coolstep");
