@@ -28,3 +28,4 @@ v*.zip
 /FluidNC/data/config.yaml
 build/
 dist/
+*.log
