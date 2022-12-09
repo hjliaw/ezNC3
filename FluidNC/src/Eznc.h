@@ -3,9 +3,9 @@
 #endif
 
 #ifdef UTF8
-#define Wchars  15      // try two more chars
+#define Wchars  15      // TBD, not sure this lib supports UTF8
 #else
-#define Wchars  13      // wdith of oled display in no. of charaters (1st line 14 touches edge)
+#define Wchars  16      // wdith of oled display in no. of charaters
 #endif
 
 #define Nstr  64

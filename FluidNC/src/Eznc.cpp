@@ -25,7 +25,7 @@ extern volatile int uimenu_active;
 extern volatile int update_dro;
 extern volatile int update_menu;
 
-extern char   ui_txt[4][16];
+extern char   ui_txt[4][Wchars+1];
 extern int    ui_sel, ui_frame;
 
 String ez_select_file();
@@ -332,10 +332,10 @@ void u8g_print( char *s0, char *s1, char *s2, char *s3, int8_t sel, int8_t frame
 {
     ui_sel = sel;
     ui_frame = frame;
-    snprintf(ui_txt[0], 15, "%s", s0 );
-    snprintf(ui_txt[1], 15, "%s", s1 );
-    snprintf(ui_txt[2], 15, "%s", s2 );
-    snprintf(ui_txt[3], 15, "%s", s3 );
+    snprintf(ui_txt[0], Wchars, "%s", s0 );
+    snprintf(ui_txt[1], Wchars, "%s", s1 );
+    snprintf(ui_txt[2], Wchars, "%s", s2 );
+    snprintf(ui_txt[3], Wchars, "%s", s3 );
     update_menu = 1;     // dispatch to oledUI
 }
 

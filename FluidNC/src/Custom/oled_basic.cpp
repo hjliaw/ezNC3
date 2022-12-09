@@ -15,6 +15,8 @@
 */
 #include "../Config.h"
 
+#include "../Eznc.h"
+
 extern int jog_axis;
 extern int jog_stepsize;
 extern long run_t0;
@@ -23,7 +25,7 @@ volatile int uimenu_active = 0;  // uimenu or dro
 volatile int update_dro = 0;
 volatile int update_menu = 0;
 
-char   ui_txt[4][16];   // todo: change to pointer for scrolling
+char   ui_txt[4][Wchars+1];   // todo: change to pointer for scrolling
 int    ui_sel, ui_frame;
 
 #ifdef INCLUDE_OLED_BASIC
@@ -168,8 +170,18 @@ void oledUI() {
     oled->setTextAlignment(TEXT_ALIGN_LEFT);  // duh, reason for no show
 	
 	if( ui_sel > 0 ){  // when sel=0,...
-	   // todo: 3 pixel round corners
-	    if( ui_frame > 0) oled->drawRect( 0, 0, 127, 18); 
+	    if( ui_frame > 0){
+            //oled->drawRect( 0, 0, 127, 18);
+            oled->drawHorizontalLine( 2, 0, 128-4);
+            oled->drawHorizontalLine( 2,17, 128-4);
+            oled->drawVerticalLine(   0, 2,  18-4);
+            oled->drawVerticalLine( 127, 2,  18-4);
+
+            oled->drawLine( 2,  0,  0,  2);
+            oled->drawLine( 0, 15,  2, 17);
+            oled->drawLine( 125,  0,  127,  2);
+            oled->drawLine( 125, 17,  127, 15);
+        }
         offs = 12;
         oled->drawString( 2, 17 +14*(ui_sel-1), ">");
 	}
