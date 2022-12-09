@@ -34,7 +34,7 @@ extern void make_user_commands();
 ESP32Encoder encUI; 
 #endif
 
-#ifdef DLC32
+#ifdef BRD_DLC32
   #define SW1  GPIO_NUM_36     // X
   #define SWL  GPIO_NUM_35     // Y
   #define SWR  GPIO_NUM_34     // Z
@@ -112,11 +112,11 @@ void clearBtn( void ){
         clickCounterSWR = 0;
 }
 
-int32_t readEncoder(int a)  // ui encoder, accel not used
+int32_t readEncoder(int a)  // ui encoder, a>0, single read
 {
     int32_t r = encUI.getCount();
 
-    if( r != 0 ){    // debounce cheap encoder, works very well
+    if( r != 0 && a == 0){    // debounce cheap encoder, works very well
         delay(150);
         r = encUI.getCount();
     }

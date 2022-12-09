@@ -278,7 +278,7 @@ static void oledUpdateOLD(void* pvParameters) {
 #endif
 
 void display_init() {
-#ifdef DLC32
+#ifdef BRD_DLC32
     init_oled(0x3c, GPIO_NUM_0, GPIO_NUM_4, GEOMETRY_128_64);  // DLC32
     oled->flipScreenVertically();   // no flip for ezNC
 #else
@@ -298,8 +298,8 @@ void display_init() {
                             NULL,              // parameters
                             1,                 // priority
                             &oledUpdateTaskHandle,
-                            0
-                            //CONFIG_ARDUINO_RUNNING_CORE  // must run the task on same core
+                            //0  //runs fine
+                            CONFIG_ARDUINO_RUNNING_CORE  // must run the task on same core
     );
 }
 

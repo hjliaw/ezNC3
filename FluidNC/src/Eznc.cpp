@@ -40,7 +40,7 @@ int jog_axis = 0;   // 0..2 for now
 int ezJog = 0;
 int32_t enc_cnt = 0;
 int   jog_stepsize = 1;
-float jog_speed = 200;  // mm/min
+float jog_speed = 100;  // mm/min
 
 long run_t0;
 
@@ -476,7 +476,7 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
 
 void ez_dro()
 {
-    enc_cnt = readEncoder(0);
+    enc_cnt = readEncoder(1);  // no double reads
 
     if( enc_cnt != 0 ){
         ez_jog( enc_cnt );
