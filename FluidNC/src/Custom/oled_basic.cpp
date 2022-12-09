@@ -104,34 +104,31 @@ void oledDRO() {
     char msg[16];
 
     oled->clear();
-    oled->setTextAlignment(TEXT_ALIGN_LEFT);
-    // Lato has distorted zero !
-    //oled->setFont(Roboto_Mono_Thin_12);  // ugly ?
-    //oled->setFont(DejaVu_Sans_Mono_15);   // OK, zero with a dot
-    oled->setFont(DejaVu_Sans_Mono_14);    // less cramped in ui menu
+    oled->setFont(DejaVu_Sans_Mono_14);
 
+    oled->setTextAlignment(TEXT_ALIGN_LEFT);
     oled->drawString(0, 0, state_name());
-    if( sys.state != State::Idle ){  // infile is not a good indicator
-        int progress = 101;
+
+    oled->setTextAlignment(TEXT_ALIGN_RIGHT);
+    if( sys.state != State::Idle ){  // infile is not a good indicator, compromise
+        int progress = 100;
         if( infile ) progress = infile->percent_complete();
-        oled->drawString(90, 2, String(progress) + "%" );
-        log_warn( "progress " << progress << "% " << String(millis()-run_t0) );
+        oled->drawString(126, 2, String(progress) + "%" );
+        //log_warn( "progress " << progress << "% " << String(millis()-run_t0) );
     }
     else{
         sprintf( msg, "jog%d", jog_stepsize );
-        oled->drawString(90, 2, msg );
+        oled->drawString(126, 2, msg );
     }
 
-    char axisVal[20];
-
+    // todo: invert X/Y/Y when limit switch tripped
     //oled->drawString(80, 14, "L");  // Limit switch
 
     auto n_axis        = config->_axes->_numberAxis;
     auto ctrl_pins     = config->_control;
     bool prb_pin_state = config->_probe->get_state();
 
-    oled->setTextAlignment(TEXT_ALIGN_RIGHT);
-
+    char axisVal[20];
     float* print_position = get_mpos();
 
     mpos_to_wpos(print_position);  // same as ezNC
@@ -147,11 +144,11 @@ void oledDRO() {
         oled->setTextAlignment(TEXT_ALIGN_RIGHT);
         if( gc_state.modal.units == Units::Mm ){
             snprintf(axisVal, 20 - 1, "%.2f mm", print_position[axis]);
-            oled->drawString( 120, oled_y_pos, axisVal);
+            oled->drawString( 126, oled_y_pos, axisVal);
         }
         else{
             snprintf(axisVal, 20 - 1, "%.3f in", print_position[axis]/25.4);
-            oled->drawString( 120, oled_y_pos, axisVal);
+            oled->drawString( 126, oled_y_pos, axisVal);
         }
     }
     oled->display();
@@ -165,7 +162,9 @@ void oledUI() {
 	offs = (ui_sel < 0 ) ? 2 : 12;
 
     oled->clear();
-	//oled->setFont(DejaVu_Sans_Mono_15);
+    oled->setFont(DejaVu_Sans_Mono_14);
+	//oled->setFont(DejaVu_Serif_13);   // ok, but space is much narrower than >
+
     oled->setTextAlignment(TEXT_ALIGN_LEFT);  // duh, reason for no show
 	
 	if( ui_sel > 0 ){  // when sel=0,...
@@ -180,9 +179,9 @@ void oledUI() {
         x = (i==0) ? 4 : offs;
         y = (i==0) ? 1 : (i*14+4);
         #ifdef UTF8
-    	  oled->drawUTF8(  x,  y, ui_txt[i]);
+    	  oled->drawUTF8( x, y, ui_txt[i]);
         #else
-	      oled->drawString(    x,  y, ui_txt[i]);
+	      oled->drawString( x, y, ui_txt[i]);
         #endif
     }
     

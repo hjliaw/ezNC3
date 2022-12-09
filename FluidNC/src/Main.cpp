@@ -114,15 +114,21 @@ void clearBtn( void ){
 
 int32_t readEncoder(int a)  // ui encoder, a>0, single read
 {
-    int32_t r = encUI.getCount();
+    static int64_t oldcnt;
+    int64_t r = encUI.getCount();
+    int32_t dcnt;
 
-    if( r != 0 && a == 0){    // debounce cheap encoder, works very well
+    dcnt = r - oldcnt;
+    if( dcnt && a == 0){  // debounce cheap encoder
         delay(150);
         r = encUI.getCount();
+        dcnt = r - oldcnt;
     }
-    encUI.clearCount();
+    //encUI.clearCount();   // use static var, less writes to interrupt related vars
 
-    return r;
+    if( dcnt ) oldcnt = r;
+
+    return dcnt;
 }
 
 void setup() {

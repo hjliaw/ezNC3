@@ -289,7 +289,7 @@ String ez_select_file(){
         return "";
     }
         
-    // try a new way to do sel menu
+    // try a new way to do sel menu, as number of file entries can be >16
     int sel =0, smin=0;
     while( ! btnClickedRlsd() && ! clickCounterSWR ){
         for( int i=0; i<4; i++ ) gcname[Ngcf+i] = "  ";
