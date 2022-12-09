@@ -29,8 +29,7 @@ extern void make_user_commands();
 
 // 20221201 HJL: ezNC code
 
-#if 0
-//#ifndef NO_ENCODER
+#ifndef NO_ENCODER
 #include <ESP32Encoder.h>
 ESP32Encoder encUI; 
 #endif
@@ -49,7 +48,6 @@ ESP32Encoder encUI;
 #define ENCA GPIO_NUM_36
 #define ENCB GPIO_NUM_39
 
-#if 0
 volatile int clickCounterSW1 = 0;
 volatile int clickCounterSWL = 0;
 volatile int clickCounterSWR = 0;
@@ -126,11 +124,9 @@ int32_t readEncoder(int a)  // ui encoder, accel not used
 
     return r;
 }
-#endif
 
 void setup() {
 
-#if 0
     ESP32Encoder::useInternalWeakPullResistors= UP;
     pinMode( ENCA, INPUT_PULLDOWN);
     pinMode( ENCB, INPUT_PULLDOWN);
@@ -146,7 +142,7 @@ void setup() {
 
     pinMode( SWR, INPUT_PULLUP);
     attachInterrupt( SWR, handleInterruptSWR, RISING );
-#endif
+
     try {
         uartInit();       // Setup serial port
         Uart0.println();  // create some white space after ESP32 boot info

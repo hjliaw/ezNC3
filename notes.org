@@ -1,4 +1,6 @@
 * can not get my_fnc to work, try starting with FluidNC (already slightly modified) 
 ** remove .pio, re-compile OK
-** copy ezNC sources
+** copy ezNC sources  OK!  runs w/o wifi client GEE
+        had to modify oled library to add new font
         had to add encoder library
+        added encoder & buttons, still ok

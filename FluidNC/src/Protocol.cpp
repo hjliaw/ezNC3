@@ -139,11 +139,9 @@ void protocol_main_loop() {
     // This is also where the system idles while waiting for something to do.
     // ---------------------------------------------------------------------------------
     
-    /*
     cancelJog = 0;
     clearBtn();
-    */
-   
+
     for (;;) {
         eznc_dispatch();
 

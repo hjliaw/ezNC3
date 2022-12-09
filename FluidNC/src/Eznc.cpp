@@ -474,7 +474,6 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
 
 // todo: disable jogging when running, allow SWR to abort
 
-#if 0
 void ez_dro()
 {
     enc_cnt = readEncoder(0);
@@ -541,19 +540,17 @@ void ez_ui()  // ui mode loop checker, NOT used yet, most ui funcs are blocking
     }
     clearBtn();
 }
-#endif // #if 0
 
 // called by protocal loop, try to be as short as possible
 // TODO; disable jogging when running ?
  
 void eznc_dispatch( void )    // top level dispatcher
 {
-    /*
     if( uimenu_active ){
         ez_ui();        
     }
     else{
         ez_dro();
     }
-    */
+    
 }
