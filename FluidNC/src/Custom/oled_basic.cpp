@@ -84,9 +84,9 @@ static void oledRadioInfo() {
         oled->drawString(55, 2, radio_name);
 #    else
         oled->drawString(50, 2, radio_addr);
+#    endif
         sprintf( js, "s%d", jog_stepsize );
         oled->drawString(115, 2, js );
-#    endif
     }
 }
 
@@ -169,16 +169,16 @@ void oledUI() {
     oled->setTextAlignment(TEXT_ALIGN_LEFT);  // duh, reason for no show
 	
 	if( ui_sel > 0 ){  // when sel=0,...
-	   //TODO
-	   //if( ui_frame > 0) oled->drawRFrame( 0, 0, 127, 18, 3); // rounded corner
-	    offs = 12;
-	    oled->drawString( 2, 14 +16*(ui_sel-1), ">");
+	   // todo: 3 pixel round corners
+	    if( ui_frame > 0) oled->drawRect( 0, 0, 127, 18); 
+        offs = 12;
+        oled->drawString( 2, 17 +14*(ui_sel-1), ">");
 	}
 
     for( int i=0; i<4; i++){
         int x, y;
         x = (i==0) ? 4 : offs;
-        y = (i==0) ? 1 : i*16;
+        y = (i==0) ? 1 : (i*14+4);
         #ifdef UTF8
     	  oled->drawUTF8(  x,  y, ui_txt[i]);
         #else
@@ -191,7 +191,7 @@ void oledUI() {
 
 
 static void oledUpdate(void* pvParameters) {
-    float old_pos[MAX_N_AXIS];
+    int32_t old_pos[MAX_N_AXIS];
 
     vTaskDelay(1000);  // wait for flash screen
 
@@ -209,10 +209,10 @@ static void oledUpdate(void* pvParameters) {
         }
 
         if( !uimenu_active ){
-            float* new_pos = get_mpos();
+            int32_t* new_pos = get_motor_steps();
             //for (int a = X_AXIS; a < n_axis; a++){   // crash ? even with y defined ?
             for (int a = 0; a < 3; a++){
-                if( fabs( new_pos[a] - old_pos[a] ) > 0.001 ){
+                if( new_pos[a] != old_pos[a] ){
                     old_pos[a] = new_pos[a];
                     update_dro = 1;
                 }
@@ -278,12 +278,13 @@ static void oledUpdateOLD(void* pvParameters) {
 #endif
 
 void display_init() {
-    //init_oled(0x3c, GPIO_NUM_0, GPIO_NUM_4, GEOMETRY_128_64);  // DLC32
+#ifdef DLC32
+    init_oled(0x3c, GPIO_NUM_0, GPIO_NUM_4, GEOMETRY_128_64);  // DLC32
+    oled->flipScreenVertically();   // no flip for ezNC
+#else
     init_oled(0x3c, GPIO_NUM_21, GPIO_NUM_22, GEOMETRY_128_64);  // ezNC
-
-    //oled->flipScreenVertically();   // no flip for ezNC
+#endif
     oled->setTextAlignment(TEXT_ALIGN_LEFT);
-
     oled->clear();
     oled->setFont(ArialMT_Plain_16);
     oled->drawString(0, 0, "Starting");
@@ -302,26 +303,5 @@ void display_init() {
     );
 }
 
-#if 0
-void oled_show_string(String s) {
-    oled->clear();
-    oled->drawString(0, 0, s);
-    oled->display();
-}
-
-void display(const char* tag, String s) {  // will capture report with special tags
-    if (!strcmp(tag, "IP")) {
-        oled_show_string(s);
-        return;
-    }
-    if (!strcmp(tag, "MACHINE")) {
-        // remove characters from the end until the string fits
-        while (oled->getStringWidth(s) > 64) {
-            s = s.substring(0, s.length() - 1);
-        }
-        oled_show_string(s);
-    }
-}
-#endif
 
 #endif

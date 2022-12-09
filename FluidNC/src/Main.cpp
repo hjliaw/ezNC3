@@ -34,19 +34,19 @@ extern void make_user_commands();
 ESP32Encoder encUI; 
 #endif
 
-/*
-#define SW1  GPIO_NUM_36     // X
-#define SWL  GPIO_NUM_35     // Y
-#define SWR  GPIO_NUM_34     // Z
-#define ENCA GPIO_NUM_22     // probe-pin brd v2.1
-#define ENCB GPIO_NUM_33     // LCD_RS
-*/
-// ezNC
-#define SW1  GPIO_NUM_34 // encoder-Z (27) 
-#define SWL  GPIO_NUM_14 // was 32, move to encoder pin
-#define SWR  GPIO_NUM_13 // was 33
-#define ENCA GPIO_NUM_36
-#define ENCB GPIO_NUM_39
+#ifdef DLC32
+  #define SW1  GPIO_NUM_36     // X
+  #define SWL  GPIO_NUM_35     // Y
+  #define SWR  GPIO_NUM_34     // Z
+  #define ENCA GPIO_NUM_22     // probe-pin brd v2.1
+  #define ENCB GPIO_NUM_33     // LCD_RS
+#else
+  #define SW1  GPIO_NUM_34 // encoder-Z (27) 
+  #define SWL  GPIO_NUM_14 // was 32, move to encoder pin
+  #define SWR  GPIO_NUM_13 // was 33
+  #define ENCA GPIO_NUM_36
+  #define ENCB GPIO_NUM_39
+#endif
 
 volatile int clickCounterSW1 = 0;
 volatile int clickCounterSWL = 0;
