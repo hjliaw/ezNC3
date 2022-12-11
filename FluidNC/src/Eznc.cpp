@@ -508,6 +508,8 @@ float x_to_dx( float x )
 #define MSG__Old  "Old"
 #define MSG__New  "New"
 
+// todo: use left align
+// since left button is used to change step size, show step size on the left ? "> d=" 
 float set_float( float X, char *s, uint8_t dd, float max, float min, float dx )
 {
 	float newX = X;
@@ -608,7 +610,7 @@ float set_float( float X, char *s, uint8_t dd, float max, float min, float dx )
 		u8g_print( gbuf[0], gbuf[1], gbuf[2], gbuf[3] );
 	}
 	if( btnClicked() ) X = newX;  // touch will keep old value, only click will take new value
-	clearBtnTouch();    // touchR used for step size !
+	clearBtnTouch();    // touchL=step size, touchR=cancel, can be confusing
 	return X;
 }
 
@@ -662,6 +664,7 @@ void ez_set_pos()
     for(;;){
         pos = get_mpos();
         mpos_to_wpos(pos);
+        // todo: add position value to menu string
 
         clearBtnTouch();
         select_from_menu( 10, menu, &sel, &smin );  // blocking
@@ -811,7 +814,7 @@ void ez_dro()
         if( cancelJog ) ez_cancel_jog();
     }
 
-    if( btnClicked() ){ // todo: individual button clear
+    if( btnClicked() || touched() ){ // todo: individual button clear
   
         if( touchedL ){
             jog_axis = (jog_axis+1) % 3;
@@ -853,7 +856,7 @@ void ez_ui()  // NOT used, current ui_menu is blocking
     }
 #endif
 
-    if( btnClicked() ){
+    if( btnClicked() || touched() ){
         if( touchedL ){
         }
             
