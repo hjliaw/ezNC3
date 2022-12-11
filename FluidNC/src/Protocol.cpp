@@ -139,6 +139,7 @@ void protocol_main_loop() {
     // This is also where the system idles while waiting for something to do.
     // ---------------------------------------------------------------------------------
     
+    ez_check_cancel = 0;
     cancelJog = 0;
     clearBtnTouch();
     int lcnt = 0;
@@ -147,8 +148,7 @@ void protocol_main_loop() {
         // Poll the input sources waiting for a complete line to arrive
         while (true) {
 
-            eznc_dispatch();  // can abort, but response is slow
-            if (sys.abort) return;  
+            eznc_dispatch();
 
             Channel* chan = nullptr;
             char     line[Channel::maxLine];
@@ -158,13 +158,7 @@ void protocol_main_loop() {
             }
 
             if (infile) {
-
-                /* problem: push button abort from this loop can be very slow, 
-                   the "system" is calling protocol_execute_realtime() often from any loop that waits long
-                   need to stick abort code into one of the channel, or add a hardware stop button
-                */
                 eznc_dispatch();  // another blocking loop
-                if (sys.abort) return;  // someone has >5s latency, which is time to execute one line of g-code in file
 
                 pollChannels();
                 if (readyNext) {
@@ -269,6 +263,10 @@ void protocol_auto_cycle_start() {
 // NOTE: The sys_rt_exec_state.bit variable flags are set by any process, step or serial interrupts, pinouts,
 // limit switches, or the main program.
 void protocol_execute_realtime() {
+    if( ez_check_cancel && touchedR ){
+        sys.abort = true;   // or set rtReset ?
+        touchedR = 0;
+    }
     protocol_exec_rt_system();
     if (sys.suspend.value) {
         protocol_exec_rt_suspend();

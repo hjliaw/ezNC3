@@ -31,8 +31,9 @@ extern int    ui_sel, ui_frame;
 String ez_select_file();
 String ez_gcfn;
 
-char   gbuf[16][Nstr];
+volatile bool ez_check_cancel =0;
 
+char   gbuf[16][Nstr];
 unsigned long jog_t0, ez_t0, ez_t1;
 char eznc_line[LINE_BUFFER_SIZE];
 int cancelJog;
@@ -769,6 +770,7 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
                 sprintf( gcmd, "$localfs/run=%s", ez_gcfn.c_str() );
                 execute_line( gcmd, Uart0, WebUI::AuthenticationLevel::LEVEL_GUEST );
                 log_info( "done file " << ez_gcfn  );
+                ez_check_cancel = true; 
         }
         return;
     case 3:  // change unit, todo: ask and make it permament if desired                                                             
@@ -878,13 +880,22 @@ void ez_ui()  // NOT used, current ui_menu is blocking
 // gee, once gcode file is started fron eznc, this is not called
 // bcz (different from esp_grbl) Protocol loop structure
 
+bool gcode_started = false;
+
 void eznc_dispatch( void )    // top level dispatcher
-{
+{    
     lcnt++;
     //if( (lcnt % 1000) == 0) log_warn( "HJL: eznc_dispatch, loop " << lcnt );
+
+    if( ez_check_cancel && sys.state == State::Cycle ) gcode_started = true;
+    if( ez_check_cancel && gcode_started && sys.state == State::Idle  ){
+        ez_check_cancel = false;
+        gcode_started = false;
+    }
 
     if( uimenu_active )
         ez_ui();        
     else
         ez_dro();
 }
+
