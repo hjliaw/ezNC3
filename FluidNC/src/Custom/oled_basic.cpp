@@ -204,7 +204,7 @@ void oledUI() {
 static void oledUpdate(void* pvParameters) {
     int32_t old_pos[MAX_N_AXIS];
 
-    vTaskDelay(1000);  // wait for flash screen
+    vTaskDelay(600);  // wait for flash screen
 
     uimenu_active=0;
     update_dro = 1;

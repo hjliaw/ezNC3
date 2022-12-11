@@ -58,7 +58,7 @@ volatile int  swR_status;
 
 volatile unsigned long lastReleaseTime = 0;
 
-void IRAM_ATTR handleInterruptSW1() {      // rising only for noisy switch or sensitive i/p
+void IRAM_ATTR handleInterruptSW1() {
     unsigned long t, dt;
     t = millis();
     dt = t - lastReleaseTime;
@@ -66,7 +66,7 @@ void IRAM_ATTR handleInterruptSW1() {      // rising only for noisy switch or se
 
     sw1_status = digitalRead(SW1);   // triggered on rising, should be high
         
-    if( sw1_status == HIGH ){   // btn rlsd
+    if( sw1_status == LOW ){
         lastReleaseTime = t;
         clickCounterSW1++;
     }
@@ -79,7 +79,7 @@ void IRAM_ATTR handleInterruptSWL() {
     if( dt < 50 ) return;
 
     swL_status = digitalRead(SWL);
-    if( swL_status == HIGH ){   // btn rlsd
+    if( swL_status == LOW ){
         lastReleaseTime = t;
         clickCounterSWL++;
     }
@@ -92,7 +92,7 @@ void IRAM_ATTR handleInterruptSWR() {
     if( dt < 50 ) return;
     
     swR_status = digitalRead(SWR);
-    if( swR_status == HIGH ){   // btn rlsd
+    if( swR_status == LOW ){
         lastReleaseTime = t;
         clickCounterSWR++;
     }
@@ -112,7 +112,7 @@ void clearBtn( void ){
         clickCounterSWR = 0;
 }
 
-int32_t readEncoder(int a)  // ui encoder, a>0, single read
+int32_t readEncoder(int a)  // ui encoder, a>0, single read with possible accel
 {
     static int64_t oldcnt;
     int64_t r = encUI.getCount();
@@ -141,13 +141,13 @@ void setup() {
     encUI.attachHalfQuad( ENCA, ENCB );  // duh
 
     pinMode( SW1, INPUT_PULLUP);
-    attachInterrupt( SW1, handleInterruptSW1, RISING );
+    attachInterrupt( SW1, handleInterruptSW1, FALLING );
 
     pinMode( SWL, INPUT_PULLUP);
-    attachInterrupt( SWL, handleInterruptSWL, RISING );
+    attachInterrupt( SWL, handleInterruptSWL, FALLING );
 
     pinMode( SWR, INPUT_PULLUP);
-    attachInterrupt( SWR, handleInterruptSWR, RISING );
+    attachInterrupt( SWR, handleInterruptSWR, FALLING );
 
     try {
         uartInit();       // Setup serial port

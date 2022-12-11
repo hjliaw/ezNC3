@@ -1,5 +1,5 @@
 /*
-  Eznc.cpp - oled + encoder + switch interface
+Eznc.cpp - oled + encoder + switch interface
 */
 
 #include "Protocol.h"
@@ -215,9 +215,12 @@ void listLFS(){ // list local file system, save file names in gcname, set Ngcf
     }
 
     for (auto const& dir_entry : iter) {
-        if ( ! dir_entry.is_directory()
-        && ( has_ending( dir_entry.path().filename(),  ".gc") ||
-             has_ending( dir_entry.path().filename(), ".ngc")    )
+        if ( ! dir_entry.is_directory() && (
+            has_ending( dir_entry.path().filename(),  ".gc") || 
+            has_ending( dir_entry.path().filename(), ".ngc") ||
+            has_ending( dir_entry.path().filename(),  ".GC") || 
+            has_ending( dir_entry.path().filename(), ".NGC")
+            )
         ){
             // String is Arduino defined class, filename is std::string
             gcname[Ngcf] = String( dir_entry.path().filename().c_str() );
@@ -431,7 +434,7 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
         //}
         clearBtn();
         return;  // return or stay ?
-       case 2:
+    case 2:
         ez_gcfn = ez_select_file();
         log_info( "file: " << ez_gcfn );
 
@@ -450,6 +453,7 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
                 log_info( "run file " << ez_gcfn  );
                 sprintf( gcmd, "$localfs/run=%s", ez_gcfn.c_str() );
                 execute_line( gcmd, Uart0, WebUI::AuthenticationLevel::LEVEL_GUEST );
+                log_info( "done file " << ez_gcfn  );
         }
         return;
     case 3:  // change unit, todo: ask and make it permament if desired                                                             
@@ -474,51 +478,63 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
 
 // todo: disable jogging when running, allow SWR to abort
 
+// currently, eznc_dispatch is really just ez_dro
+unsigned int lcnt = 0;
 void ez_dro()
 {
-    enc_cnt = readEncoder(1);  // no double reads
+    //if( (lcnt % 1000) == 0) log_warn( "HJL: ez_dro loop " << lcnt );
 
-    if( enc_cnt != 0 ){
-        ez_jog( enc_cnt );
+    if( sys.state == State::Idle || sys.state == State::Jog ){
+        enc_cnt = readEncoder(1);  // 1=no double reads
+        if( enc_cnt != 0 ){
+            ez_jog( enc_cnt );
+        }
+        else{
+            unsigned long jog_dt = millis() - jog_t0;
+            if( jog_dt > 150 && ezJog ){   // avoid multiple calls
+                cancelJog = 1;
+                jog_t0 += jog_dt;
+            }
+        }
+        if( cancelJog ) ez_cancel_jog();
     }
-    else{
-		unsigned long jog_dt = millis() - jog_t0;
-		if( jog_dt > 150 && ezJog ){   // avoid multiple calls
-			cancelJog = 1;
-			jog_t0 += jog_dt;
-		}
-	}
 
-	if( cancelJog ) ez_cancel_jog();
-
-    if( btnClicked() ){
+    if( btnClicked() ){ // todo: individual button clear
+  
         if( clickCounterSWL ){
             jog_axis = (jog_axis+1) % 3;
             update_dro = 1;
-            //log_info( "SWL jog axis " << jog_axis );
+            log_info( "SWL jog axis " << jog_axis );
         }
             
         if( clickCounterSWR ){
-            jog_stepsize = jog_stepsize << 1;
-            if( jog_stepsize > 4 ) jog_stepsize = 1;
-            update_dro = 1;
-            //log_info( "SWR jog speed " << jog_speedup );
-        }
+            if( sys.state == State::Idle || sys.state == State::Jog ){
+                jog_stepsize = jog_stepsize << 1;
+                if( jog_stepsize > 4 ) jog_stepsize = 1;
+                update_dro = 1;
+                log_info( "SWR jog step " << jog_stepsize );
+            }
+            if( sys.state == State::Cycle ){
+                log_warn( "HJL: SWR abort, loop " << lcnt  );
+                sys.abort = true;
+            }
+        }   
 
-#ifdef INCLUDE_OLED_IO
-        if( clickCounterSW1 ){  // click in DRO enters ui menu mode
+        if( clickCounterSW1 ){  // click main button in DRO enters ui menu mode
             uimenu_active = 1;
             ez_menu();
             uimenu_active = 0;
             update_dro = 1;
+            log_warn( "HJL: returned from ez_menu" );
         }
-#endif
         clearBtn();            
     }
 }
 
-void ez_ui()  // ui mode loop checker, NOT used yet, most ui funcs are blocking
+void ez_ui()  // NOT used, current ui_menu is blocking
 {
+//    if( (lcnt % 1000) == 0) log_warn( "HJL: ez_ui, loop " << lcnt );
+
 #ifndef NO_ENCODER
     enc_cnt = readEncoder(0);
     if( enc_cnt != 0 ){
@@ -543,14 +559,17 @@ void ez_ui()  // ui mode loop checker, NOT used yet, most ui funcs are blocking
 
 // called by protocal loop, try to be as short as possible
 // TODO; disable jogging when running ?
- 
+
+// gee, once gcode file is started fron eznc, this is not called
+// bcz (different from esp_grbl) Protocol loop structure
+
 void eznc_dispatch( void )    // top level dispatcher
 {
-    if( uimenu_active ){
+    lcnt++;
+    //if( (lcnt % 1000) == 0) log_warn( "HJL: eznc_dispatch, loop " << lcnt );
+
+    if( uimenu_active )
         ez_ui();        
-    }
-    else{
+    else
         ez_dro();
-    }
-    
 }

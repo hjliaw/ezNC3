@@ -141,12 +141,17 @@ void protocol_main_loop() {
     
     cancelJog = 0;
     clearBtn();
+    int lcnt = 0;
 
     for (;;) {
-        eznc_dispatch();
-
         // Poll the input sources waiting for a complete line to arrive
         while (true) {
+            lcnt++;
+            if( lcnt % 1000 == 0)  log_warn("HJL: protocol loop " << lcnt );
+
+            eznc_dispatch();  // can abort, but response is slow
+            if (sys.abort) return;  
+
             Channel* chan = nullptr;
             char     line[Channel::maxLine];
             protocol_execute_realtime();  // Runtime command check point.
@@ -155,6 +160,18 @@ void protocol_main_loop() {
             }
 
             if (infile) {
+
+                /* problem: push button abort from this loop can be very slow, 
+                   the "system" is calling protocol_execute_realtime() often from any loop that waits long
+                   need to stick abort code into one of the channel, or add a hardware stop button
+                */
+
+                eznc_dispatch();  // another blocking loop
+                if (sys.abort) return;  // someone has >5s latency, which is time to execute one line of g-code in file
+
+                lcnt++;  // first 50 goes by quickly, then slows down a lot once running, but abort from serial is quick ?
+                log_warn("HJL: infile loop " << lcnt );
+
                 pollChannels();
                 if (readyNext) {
                     readyNext = false;
@@ -186,13 +203,16 @@ void protocol_main_loop() {
             report_echo_line_received(line, *chan);
 #endif
             display("GCODE", line);
+
             // auth_level can be upgraded by supplying a password on the command line
             report_status_message(execute_line(line, *chan, WebUI::AuthenticationLevel::LEVEL_GUEST), *chan);
         }
+        
         // If there are no more lines to be processed and executed,
         // auto-cycle start, if enabled, any queued moves.
         protocol_auto_cycle_start();
         protocol_execute_realtime();  // Runtime command check point.
+        
         if (sys.abort) {
             return;  // Bail to main() program loop to reset system.
         }
