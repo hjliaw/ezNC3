@@ -284,8 +284,8 @@ String ez_select_file(){
     if( Ngcf == 0 ){
         clearBtnTouch();
         u8g_print(  (char *) "No gc|ngc file",
-                    (char *) " upload",
-                    (char *) " or rename",
+                    (char *) "Upload va WiFi",
+                    (char *) " ",
                     (char *) "clck to cont" );
         while( ! btnClickedRlsd() && ! touchedR );
         clearBtnTouch();
@@ -296,7 +296,7 @@ String ez_select_file(){
     int sel =0, smin=0;
     while( ! btnClickedRlsd() && ! touchedR ){
         for( int i=0; i<4; i++ ) gcname[Ngcf+i] = "  ";
-        strncpy( gbuf[0], "Select g-code", Nstr );
+        strncpy( gbuf[0], "Select File", Nstr );
 
         for( int i=1; i<4; i++ )
             // eznc first char='/', but fluidnc removed that
@@ -305,7 +305,7 @@ String ez_select_file(){
         gbuf[1][0] = gbuf[2][0] = gbuf[3][0] = ' ';
 
         gbuf[sel-smin+1][0] = '>';
-        u8g_print( gbuf[0], gbuf[1], gbuf[2], gbuf[3] );
+        u8g_print( gbuf[0], gbuf[1], gbuf[2], gbuf[3], -1, 1 );
 
         if( int32_t r =  readEncoder(0) ){
             //char msg[128];
@@ -398,7 +398,7 @@ void select_from_menu( uint8_t N, char (*ptr)[Nstr], int8_t *sp, int8_t *sminp, 
         *sp = *sminp = 1;
     else
         *sp = sv;
-    clearBtnTouch();
+    clearBtn();   // preserve touchdR
 }
 
 //---------------------------------------------------------------------------------------
@@ -526,28 +526,28 @@ float set_float( float X, char *s, uint8_t dd, float max, float min, float dx )
 	scroll(  gbuf[0], s, 1 );  // sprintf( gbuf[0], "%s", s );
 	switch( dd ){
 	case 0:
-		sprintf( gbuf[3], "%s %9.0f" , MSG__Old, X );  // NOTE: 4+1+9 = 14 chars, formating depends on language !
+		sprintf( gbuf[3], "%s %10.0f" , MSG__Old, X );  // NOTE: formating depends on language !  FNC has more chars
 		sprintf( sdx, "d=%.0f",  dx  );
 		break;
 	case 1:
-		sprintf( gbuf[3], "%s %9.1f" , MSG__Old, X );
+		sprintf( gbuf[3], "%s %10.1f" , MSG__Old, X );
 		sprintf( sdx, "d=%.1f",  dx  );
 		break;
 	case 2:
- 		sprintf( gbuf[3],  "%s %9.2f" , MSG__Old, X );
+ 		sprintf( gbuf[3],  "%s %10.2f" , MSG__Old, X );
 		sprintf( sdx, "d=%.2f",  dx  );
 		break;
 	case 3:
-		sprintf( gbuf[3], "%s %9.3f" , MSG__Old, X );
+		sprintf( gbuf[3], "%s %10.3f" , MSG__Old, X );
 		sprintf( sdx, "d=%.3f",  dx  );
 		break;
 	case 4:
-		sprintf( gbuf[3], "%s %9.4f" , MSG__Old, X );
+		sprintf( gbuf[3], "%s %10.4f" , MSG__Old, X );
 		sprintf( sdx, "d=%.4f",  dx  );
 		break;
 	}
 		
-	sprintf( gbuf[1], "%14s", sdx  );  // LANG WISH: arrow to indicate digit being changed
+	sprintf( gbuf[1], ">%13s", sdx  );  // LANG WISH: arrow to indicate digit being changed
 		
 	int tchLcnt = 0;
 	float savedX = max * 2;
@@ -581,7 +581,7 @@ float set_float( float X, char *s, uint8_t dd, float max, float min, float dx )
 			if ( dd == 0 && dx < 2 )  dx_inc = 1;
 		}
 
-		int32_t r = readEncoder(16);  // 1 is slow, try 16
+		int32_t r = readEncoder(16);  // no 2nd read, accel not implemented
 		
 		if( r ) tchLcnt = 0;  // touchedL N times w/o rotate the click wheel
 		                      // to clear value to zero or back to old saved value
@@ -596,7 +596,7 @@ float set_float( float X, char *s, uint8_t dd, float max, float min, float dx )
 			tchLcnt = 0;
 		}
 		else{
-			newX += r * dx;
+			newX += r * dx / 2;   // one click=2
 		}
 		
 		if( newX < min ){ newX= min; oled_flash(); }
@@ -647,13 +647,13 @@ void ez_set_pos()
 
     int8_t sel=1, smin=1;
     char menu[10][Nstr] = {
-        "set position",
-        "go back",  // missed comma will pass compilier
-        "X=Y=Z=0",
-        "X=Y=0",
-        "X=0",
-        "Y=0",
-        "Z=0",
+        "Set Position",
+        "Back to DRO",  // missed comma will pass compilier
+        "X=Y=Z = 0",
+        "X=Y = 0",
+        "X = 0",
+        "Y = 0",
+        "Z = 0",
         "X",
         "Y",
         "Z"
@@ -706,19 +706,19 @@ void ez_set_pos()
                 break;
             case 7:  // X=?
                 val = pos[0];
-                val = set_float_auto_unit( val, (char *)"Set X=" );                
+                val = set_float_auto_unit( val, (char *)"Set X= " );                
                 sprintf( eznc_line, "G10L20P1X%.4f", val );   // always set
                 gc_execute_line(eznc_line, Uart0);
                 break;
             case 8:  // Y=?
                 val = pos[1];
-                val = set_float_auto_unit( val, (char *)"Set Y=" );                
+                val = set_float_auto_unit( val, (char *)"Set Y= " );                
                 sprintf( eznc_line, "G10L20P1Y%.4f", val );   // always set
                 gc_execute_line(eznc_line, Uart0);
                 break;
             case 9:  // Z=?
                 val = pos[2];
-                val = set_float_auto_unit( val, (char *)"Set Z=" );                
+                val = set_float_auto_unit( val, (char *)"Set Z= " );                
                 sprintf( eznc_line, "G10L20P1Z%.4f", val );   // always set
                 gc_execute_line(eznc_line, Uart0);
                 break;

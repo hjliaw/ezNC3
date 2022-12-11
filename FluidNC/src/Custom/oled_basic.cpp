@@ -168,20 +168,21 @@ void oledUI() {
 	//oled->setFont(DejaVu_Serif_13);   // ok, but space is much narrower than >
 
     oled->setTextAlignment(TEXT_ALIGN_LEFT);  // duh, reason for no show
-	
-	if( ui_sel > 0 ){  // when sel=0,...
-	    if( ui_frame > 0){
-            //oled->drawRect( 0, 0, 127, 18);
-            oled->drawHorizontalLine( 2, 0, 128-4);
-            oled->drawHorizontalLine( 2,17, 128-4);
-            oled->drawVerticalLine(   0, 2,  18-4);
-            oled->drawVerticalLine( 127, 2,  18-4);
 
-            oled->drawLine( 2,  0,  0,  2);
-            oled->drawLine( 0, 15,  2, 17);
-            oled->drawLine( 125,  0,  127,  2);
-            oled->drawLine( 125, 17,  127, 15);
-        }
+    if( ui_frame > 0){
+        //oled->drawRect( 0, 0, 127, 18);
+        oled->drawHorizontalLine( 2, 0, 128-4);
+        oled->drawHorizontalLine( 2,17, 128-4);
+        oled->drawVerticalLine(   0, 2,  18-4);
+        oled->drawVerticalLine( 127, 2,  18-4);
+
+        oled->drawLine( 2,  0,  0,  2);
+        oled->drawLine( 0, 15,  2, 17);
+        oled->drawLine( 125,  0,  127,  2);
+        oled->drawLine( 125, 17,  127, 15);
+    }
+
+	if( ui_sel > 0 ){  // what happens when sel=0 ?
         offs = 12;
         oled->drawString( 2, 17 +14*(ui_sel-1), ">");
 	}

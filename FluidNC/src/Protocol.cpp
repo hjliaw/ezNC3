@@ -146,8 +146,6 @@ void protocol_main_loop() {
     for (;;) {
         // Poll the input sources waiting for a complete line to arrive
         while (true) {
-            lcnt++;
-            if( lcnt % 1000 == 0)  log_warn("HJL: protocol loop " << lcnt );
 
             eznc_dispatch();  // can abort, but response is slow
             if (sys.abort) return;  
@@ -165,12 +163,8 @@ void protocol_main_loop() {
                    the "system" is calling protocol_execute_realtime() often from any loop that waits long
                    need to stick abort code into one of the channel, or add a hardware stop button
                 */
-
                 eznc_dispatch();  // another blocking loop
                 if (sys.abort) return;  // someone has >5s latency, which is time to execute one line of g-code in file
-
-                lcnt++;  // first 50 goes by quickly, then slows down a lot once running, but abort from serial is quick ?
-                log_warn("HJL: infile loop " << lcnt );
 
                 pollChannels();
                 if (readyNext) {
