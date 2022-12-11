@@ -4,3 +4,5 @@
         had to modify oled library to add new font
         had to add encoder library
         added encoder & buttons, still ok
+** foo_bar state preserved
+* TODO need to debounce main switc

@@ -140,7 +140,7 @@ void protocol_main_loop() {
     // ---------------------------------------------------------------------------------
     
     cancelJog = 0;
-    clearBtn();
+    clearBtnTouch();
     int lcnt = 0;
 
     for (;;) {

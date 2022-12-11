@@ -282,19 +282,19 @@ String ez_select_file(){
     listLFS();
 
     if( Ngcf == 0 ){
-        clearBtn();
+        clearBtnTouch();
         u8g_print(  (char *) "No gc|ngc file",
                     (char *) " upload",
                     (char *) " or rename",
                     (char *) "clck to cont" );
-        while( ! btnClickedRlsd() && ! clickCounterSWR );
-        clearBtn();
+        while( ! btnClickedRlsd() && ! touchedR );
+        clearBtnTouch();
         return "";
     }
         
     // try a new way to do sel menu, as number of file entries can be >16
     int sel =0, smin=0;
-    while( ! btnClickedRlsd() && ! clickCounterSWR ){
+    while( ! btnClickedRlsd() && ! touchedR ){
         for( int i=0; i<4; i++ ) gcname[Ngcf+i] = "  ";
         strncpy( gbuf[0], "Select g-code", Nstr );
 
@@ -319,9 +319,9 @@ String ez_select_file(){
             //Serial.println( msg );
         }
     }
-    if( clickCounterSWR ) return "";
+    if( touchedR ) return "";
 
-    clearBtn();
+    clearBtnTouch();
 
     // TODO
     //if( confirm( (char *)"Run g-code", (char *)gcname[sel].c_str() ))
@@ -374,9 +374,9 @@ void select_from_menu( uint8_t N, char (*ptr)[Nstr], int8_t *sp, int8_t *sminp, 
     scroll( gbuf[0], ptr[0], Wchars );  // init, with frame
         
     draw_menu( sv, sminp );
-    clearBtn();
+    clearBtnTouch();
     osv = sv;
-    while( ! btnClickedRlsd() && ! clickCounterSWR ){
+    while( ! btnClickedRlsd() && ! touchedR ){
         scroll( gbuf[0], ptr[0], 0 );
         int32_t r = readEncoder(0);  // no accel
 
@@ -394,11 +394,333 @@ void select_from_menu( uint8_t N, char (*ptr)[Nstr], int8_t *sp, int8_t *sminp, 
         draw_menu( sv, sminp );
     }
 
-    if( clickCounterSWR )
+    if( touchedR )
         *sp = *sminp = 1;
     else
         *sp = sv;
-    clearBtn();
+    clearBtnTouch();
+}
+
+//---------------------------------------------------------------------------------------
+// OK/Cancel, with frame, otherwise Yes/No no frame                                                                  
+// yes=1 default positive, yes=0 default negative                                                                     
+// scroll top two lines at the same time
+
+#define MSG_OK                          "OK"
+#define MSG_Cancel                      "Cancel"
+#define MSG_Yes                         "Yes"
+#define MSG_No                          "No"
+
+bool ask( char *msg1, char *msg2, int ok_or_cancel, int yes  )
+{
+    unsigned int len[2], max_len, pos = 0, zcnt = 0;
+    long t0 = millis();
+    String strx;
+    char *msgp[2];
+
+    int s;
+    if( yes ) s = 2;
+    else      s = 3;
+
+    msgp[0] = msg1; msgp[1] = msg2;
+    max_len = 0;
+    for( int i=0; i<2; i++ ){
+        len[i] = str_length( msgp[i] );
+        if( len[i] > max_len ) max_len = len[i];
+
+        if( len[i] > Wchars )
+            strx = str_substr( msgp[i], 0, Wchars );
+        else
+            strx = str_substr( msgp[i], 0, len[i] );
+        strx.toCharArray( gbuf[i], Nstr);
+    }
+    sprintf( gbuf[2], ok_or_cancel ? MSG_OK     : MSG_Yes );
+    sprintf( gbuf[3], ok_or_cancel ? MSG_Cancel : MSG_No  );
+
+    u8g_print( gbuf[0], gbuf[1], gbuf[2], gbuf[3], s, ok_or_cancel );   // OK/Cancel with frame                       
+
+    clearBtnTouch();
+    while( ! btnClickedRlsd() && ! touchedR ){
+
+        long t1 = millis();
+        if( t1-t0 > Tscroll && max_len > Wchars ){
+            t0 = t1;
+            if( (pos || zcnt > Nwaitscr) ) pos++;
+            else                           zcnt++;
+
+            if( (pos + Wchars - 2 ) > max_len ) pos = zcnt = 0;
+
+            for( int i=0; i<2; i++ ){
+                if( pos + Wchars < len[i] )
+                    strx = str_substr( msgp[i], pos, Wchars );
+                else{
+                    if( len[i] > pos )
+                        strx = str_substr( msgp[i], pos, len[i] - pos );
+                    else
+                        strx = "";
+                }
+                strx.toCharArray( gbuf[i], Nstr);
+            }
+        }
+
+        int32_t rot = readEncoder(0);
+        if( rot > 0 ) s++;
+        if( rot < 0 ) s--;
+        if(  s < 2  ){ s = 2; oled_flash(); }
+        if(  s > 3  ){ s = 3; oled_flash(); }
+        u8g_print( gbuf[0], gbuf[1], gbuf[2], gbuf[3], s, ok_or_cancel );  // last param= frame                       
+    }
+
+    if( ok_or_cancel ){
+        if( touchedR ) s = 3;            // cancel                                                                    
+    }
+    else{
+        if( touchedR ) s = yes ? 2 : 3;  // cancel means default                                                      
+    }
+    clearBtnTouch();
+    return s == 2;
+}
+
+bool confirm( char *msg1, char *msg2, int yes )    // ok or cancel                                                    
+{
+    return ask( msg1, msg2, 1, yes );
+}
+
+bool yes_or_no( char *msg1, char *msg2, int yes )    // Yes or No question, with default answer                       
+{
+    return ask( msg1, msg2, 0, yes );
+}
+
+//-----------------------------------------------------------------------------------------------
+
+float x_to_dx( float x )
+{
+	float xa  = abs(x);
+	if( xa < 0.1 ) return 0.001;
+	if( xa < 10  ) return 0.01;
+	if( xa < 100 ) return 0.1;
+	if( xa < 1e3 ) return 1;
+	if( xa < 1e4 ) return 10;
+	return 100;
+}
+
+// dd = decimal digits 0..4
+#define MSG__Old  "Old"
+#define MSG__New  "New"
+
+float set_float( float X, char *s, uint8_t dd, float max, float min, float dx )
+{
+	float newX = X;
+	int   dx_inc = 1;
+	char  sdx[Nstr];
+
+	if( dx < 1e-6 ){   // 0.0 for auto set dx
+		dx = x_to_dx( X );
+		if( dd == 0 && dx < 1   )  dx = 1;   // zero deciaml point
+		if( dd == 1 && dx < 0.1 )  dx = 0.1;
+		if( dd == 2 && dx < 0.01 ) dx = 0.01;
+	}
+	
+	scroll(  gbuf[0], s, 1 );  // sprintf( gbuf[0], "%s", s );
+	switch( dd ){
+	case 0:
+		sprintf( gbuf[3], "%s %9.0f" , MSG__Old, X );  // NOTE: 4+1+9 = 14 chars, formating depends on language !
+		sprintf( sdx, "d=%.0f",  dx  );
+		break;
+	case 1:
+		sprintf( gbuf[3], "%s %9.1f" , MSG__Old, X );
+		sprintf( sdx, "d=%.1f",  dx  );
+		break;
+	case 2:
+ 		sprintf( gbuf[3],  "%s %9.2f" , MSG__Old, X );
+		sprintf( sdx, "d=%.2f",  dx  );
+		break;
+	case 3:
+		sprintf( gbuf[3], "%s %9.3f" , MSG__Old, X );
+		sprintf( sdx, "d=%.3f",  dx  );
+		break;
+	case 4:
+		sprintf( gbuf[3], "%s %9.4f" , MSG__Old, X );
+		sprintf( sdx, "d=%.4f",  dx  );
+		break;
+	}
+		
+	sprintf( gbuf[1], "%14s", sdx  );  // LANG WISH: arrow to indicate digit being changed
+		
+	int tchLcnt = 0;
+	float savedX = max * 2;
+	clearBtnTouch();
+	while( ! btnClickedRlsd() && ! touchedR ){
+
+		scroll(  gbuf[0], s, 0 );
+		
+		if( touchedL ){
+			touchedL = 0;
+			tchLcnt++;
+						
+			if (dx_inc) dx *= 10;
+			else if( (dd != 0 && dd < 3 && dx > 0.01 ) ||
+					 (dd >= 3 && dx > 0.0001 ) || (dd == 0 && dx > 1) ) dx /= 10;
+
+			if( dd == 4 )      sprintf( sdx, "d=%.4f", dx );
+			else if( dd == 3 ) sprintf( sdx, "d=%.3f", dx );
+			else if( dd == 2 ) sprintf( sdx, "d=%.2f", dx );
+			else if( dd == 1 ) sprintf( sdx, "d=%.1f", dx );
+			else               sprintf( sdx, "d=%.0f", dx );
+
+			sprintf( gbuf[1], "%14s", sdx  );
+			u8g_print( gbuf[0], gbuf[1], gbuf[2], gbuf[3] );
+			
+			if ( dd < 3 && dx > abs(newX)/10 ) dx_inc = 0;
+			if ( dd > 2 && dx > 0.2 ) dx_inc = 0;   // allow 1 degree chnage in taper angle
+			
+			if ( dd >= 3 && dx < 0.0002 )  dx_inc = 1;
+			if ( dd > 0 && dd < 3 && dx < 0.02 )  dx_inc = 1;    // <0.1 has resolution error
+			if ( dd == 0 && dx < 2 )  dx_inc = 1;
+		}
+
+		int32_t r = readEncoder(16);  // 1 is slow, try 16
+		
+		if( r ) tchLcnt = 0;  // touchedL N times w/o rotate the click wheel
+		                      // to clear value to zero or back to old saved value
+		if( tchLcnt > 10 ){   
+			if( savedX > max ){
+				savedX = newX;
+				  newX = 0.0;
+			}else{
+				newX   = savedX;
+				savedX = 2*max;
+			}
+			tchLcnt = 0;
+		}
+		else{
+			newX += r * dx;
+		}
+		
+		if( newX < min ){ newX= min; oled_flash(); }
+		if( newX > max ){ newX= max; oled_flash(); }
+		
+		if( dd == 4 )      sprintf( gbuf[2], "%s %9.4f" , MSG__New, newX );
+		else if( dd == 3 ) sprintf( gbuf[2], "%s %9.3f" , MSG__New, newX );
+		else if( dd == 2 ) sprintf( gbuf[2], "%s %9.2f" , MSG__New, newX );
+		else if( dd == 1 ) sprintf( gbuf[2], "%s %9.1f" , MSG__New, newX );
+		else               sprintf( gbuf[2], "%s %9.0f" , MSG__New, newX );
+		u8g_print( gbuf[0], gbuf[1], gbuf[2], gbuf[3] );
+	}
+	if( btnClicked() ) X = newX;  // touch will keep old value, only click will take new value
+	clearBtnTouch();    // touchR used for step size !
+	return X;
+}
+
+#define INCH2MM    (25.4)
+#define MM2INCH    (1.0/25.4)
+
+#define NDDI  3     // number of displayed digits in inch mode
+#define NDDM  2     // number of displayed digits in metric mode
+
+float set_float_auto_unit( float Xx, char *s, float max, float min, float dx ){
+    char ttl[Nstr];
+    sprintf( ttl, "%s %s", s, (gc_state.modal.units == Units::Mm) ? "(mm)" : "(inch)" );    // TODO: language
+
+    if( gc_state.modal.units == Units::Mm  )
+        return set_float( Xx,        ttl, NDDM, max, min, dx );
+    else
+        return set_float( Xx*MM2INCH, ttl, NDDI, max*MM2INCH, min*MM2INCH, dx ) * INCH2MM;
+}
+
+//---------------------------------------------------------------------------------------
+void ez_set_pos()
+{
+    log_info( "set pos");
+        // todo: start with current position
+        //   want a quick way to enter zero of single axis
+
+       //sprintf( msg, "Set As (%s)", (EZnc.Unit==INCH) ? "inch" : "mm" );
+        //ez_enter_pos( msg, (char *) "click to set" );
+        //if( btnClicked() ){
+        //    Serial.print( "[MSG:ezSetPos-" );    // add [MSG so that ugs doesn't complain                           
+        //    sprintf( eznc_line, "G10L20P1X%fY0Z%f", npos[0], npos[1] );
+        //    report_status_message(gc_execute_line(eznc_line, CLIENT_SERIAL), CLIENT_SERIAL);
+        //}
+
+    int8_t sel=1, smin=1;
+    char menu[10][Nstr] = {
+        "set position",
+        "go back",  // missed comma will pass compilier
+        "X=Y=Z=0",
+        "X=Y=0",
+        "X=0",
+        "Y=0",
+        "Z=0",
+        "X",
+        "Y",
+        "Z"
+    };
+    char msg[Nstr];
+    float val, *pos;
+
+    for(;;){
+        pos = get_mpos();
+        mpos_to_wpos(pos);
+
+        clearBtnTouch();
+        select_from_menu( 10, menu, &sel, &smin );  // blocking
+        if( touchedR ) return;
+
+        switch(sel){
+            case 1:
+                clearBtnTouch();
+                return;
+            case 2:  // X/Y/Z=0
+                if( confirm( (char *)"Set X=Y=Z=0") ){
+                     sprintf( eznc_line, "G10L20P1X0Y0Z0");
+                     gc_execute_line(eznc_line, Uart0);
+                }
+                break;
+            case 3:  // X/Y=0
+                if( confirm( (char *)"Set X=Y=0") ){
+                     sprintf( eznc_line, "G10L20P1X0Y0");
+                     gc_execute_line(eznc_line, Uart0);
+                }
+                break;
+            case 4:  // X=0
+                if( confirm( (char *)"Set X=0") ){
+                     sprintf( eznc_line, "G10L20P1X0");
+                     gc_execute_line(eznc_line, Uart0);
+                }
+                break;
+            case 5:  // Y=0
+                if( confirm( (char *)"Set Y=0") ){
+                     sprintf( eznc_line, "G10L20P1Y0");
+                     gc_execute_line(eznc_line, Uart0);
+                }
+                break;
+            case 6:  // Z=0
+                if( confirm( (char *)"Set Z=0") ){
+                     sprintf( eznc_line, "G10L20P1Z0");
+                     gc_execute_line(eznc_line, Uart0);
+                }
+                break;
+            case 7:  // X=?
+                val = pos[0];
+                val = set_float_auto_unit( val, (char *)"Set X=" );                
+                sprintf( eznc_line, "G10L20P1X%.4f", val );   // always set
+                gc_execute_line(eznc_line, Uart0);
+                break;
+            case 8:  // Y=?
+                val = pos[1];
+                val = set_float_auto_unit( val, (char *)"Set Y=" );                
+                sprintf( eznc_line, "G10L20P1Y%.4f", val );   // always set
+                gc_execute_line(eznc_line, Uart0);
+                break;
+            case 9:  // Z=?
+                val = pos[2];
+                val = set_float_auto_unit( val, (char *)"Set Z=" );                
+                sprintf( eznc_line, "G10L20P1Z%.4f", val );   // always set
+                gc_execute_line(eznc_line, Uart0);
+                break;
+        }
+    }
 }
 
 void ez_menu()   // top level ui menu, only title line is auto-scrolled
@@ -407,7 +729,7 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
     int progress=0, old_progress=0;
 
     char menu[6][Nstr] = {
-        "ezFluidNC 01234567890",    // HJL: test font and scrolling, to be removed
+        "ezFluidNC",
         "Set Pos",
         "Run G-code",
         "Change Unit",
@@ -416,24 +738,14 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
     };
     char msg[Nstr];
 
-    clearBtn();
+    clearBtnTouch();
     select_from_menu( 6, menu, &sel, &smin );  // blocking
-    if( clickCounterSWR ) return;
+    if( touchedR ) return;
 
     switch(sel){
     case 1:
-        // todo: start with current position
-        //   want a quick way to enter zero of single axis
-        log_info( "set pos");
-        //sprintf( msg, "Set As (%s)", (EZnc.Unit==INCH) ? "inch" : "mm" );
-        //ez_enter_pos( msg, (char *) "click to set" );
-        //if( btnClicked() ){
-        //    Serial.print( "[MSG:ezSetPos-" );    // add [MSG so that ugs doesn't complain                           
-        //    sprintf( eznc_line, "G10L20P1X%fY0Z%f", npos[0], npos[1] );
-        //    report_status_message(gc_execute_line(eznc_line, CLIENT_SERIAL), CLIENT_SERIAL);
-        //}
-        clearBtn();
-        return;  // return or stay ?
+        ez_set_pos(); 
+        return;
     case 2:
         ez_gcfn = ez_select_file();
         log_info( "file: " << ez_gcfn );
@@ -501,13 +813,13 @@ void ez_dro()
 
     if( btnClicked() ){ // todo: individual button clear
   
-        if( clickCounterSWL ){
+        if( touchedL ){
             jog_axis = (jog_axis+1) % 3;
             update_dro = 1;
             log_info( "SWL jog axis " << jog_axis );
         }
             
-        if( clickCounterSWR ){
+        if( touchedR ){
             if( sys.state == State::Idle || sys.state == State::Jog ){
                 jog_stepsize = jog_stepsize << 1;
                 if( jog_stepsize > 4 ) jog_stepsize = 1;
@@ -527,7 +839,7 @@ void ez_dro()
             update_dro = 1;
             log_warn( "HJL: returned from ez_menu" );
         }
-        clearBtn();            
+        clearBtnTouch();            
     }
 }
 
@@ -542,10 +854,10 @@ void ez_ui()  // NOT used, current ui_menu is blocking
 #endif
 
     if( btnClicked() ){
-        if( clickCounterSWL ){
+        if( touchedL ){
         }
             
-        if( clickCounterSWR ){
+        if( touchedR ){
         }
             
         if( clickCounterSW1 ){
@@ -554,7 +866,7 @@ void ez_ui()  // NOT used, current ui_menu is blocking
             update_dro = 1;
         }
     }
-    clearBtn();
+    clearBtnTouch();
 }
 
 // called by protocal loop, try to be as short as possible

@@ -49,8 +49,8 @@ ESP32Encoder encUI;
 #endif
 
 volatile int clickCounterSW1 = 0;
-volatile int clickCounterSWL = 0;
-volatile int clickCounterSWR = 0;
+volatile int touchedL = 0;
+volatile int touchedR = 0;
 
 volatile int  sw1_status;
 volatile int  swL_status;
@@ -81,7 +81,7 @@ void IRAM_ATTR handleInterruptSWL() {
     swL_status = digitalRead(SWL);
     if( swL_status == LOW ){
         lastReleaseTime = t;
-        clickCounterSWL++;
+        touchedL++;
     }
 }
 
@@ -94,7 +94,7 @@ void IRAM_ATTR handleInterruptSWR() {
     swR_status = digitalRead(SWR);
     if( swR_status == LOW ){
         lastReleaseTime = t;
-        clickCounterSWR++;
+        touchedR++;
     }
 }
 int volatile btnClickedRlsd( void ){   // clicked and released, for UI navigation
@@ -103,14 +103,28 @@ int volatile btnClickedRlsd( void ){   // clicked and released, for UI navigatio
 }
 
 int volatile btnClicked( void ){  // no delay
-        return( clickCounterSW1 || clickCounterSWL || clickCounterSWR);
+        return( clickCounterSW1 );
+}
+
+int volatile touched( void ){  // no delay
+        return(touchedL || touchedR);
 }
 
 void clearBtn( void ){
         clickCounterSW1 = 0;
-        clickCounterSWL = 0;
-        clickCounterSWR = 0;
 }
+
+void clearBtnTouch( void ){
+        clickCounterSW1 = 0;
+        touchedL = 0;
+        touchedR = 0;
+}
+
+void clearTouch( void ){
+        touchedL = 0;
+        touchedR = 0;
+}
+
 
 int32_t readEncoder(int a)  // ui encoder, a>0, single read with possible accel
 {
