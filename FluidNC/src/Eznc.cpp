@@ -40,8 +40,15 @@ int cancelJog;
 int jog_axis = 0;   // 0..2 for now                                                                                      
 int ezJog = 0;
 int32_t enc_cnt = 0;
+
+// todo: save parameters permamently (in localfs)
+
 int   jog_stepsize = 1;
-float jog_speed = 100;  // mm/min
+float jog_speed = 200;  // mm/min
+float run_speed = 150;
+float pf_length = 20;   // mm
+int   pf_dir = 1;
+float pf_lift = 0.0;  // >0, lift-rapid, <=0, plunge-cut
 
 long run_t0;
 
@@ -603,11 +610,11 @@ float set_float( float X, char *s, uint8_t dd, float max, float min, float dx )
 		if( newX < min ){ newX= min; oled_flash(); }
 		if( newX > max ){ newX= max; oled_flash(); }
 		
-		if( dd == 4 )      sprintf( gbuf[2], "%s %9.4f" , MSG__New, newX );
-		else if( dd == 3 ) sprintf( gbuf[2], "%s %9.3f" , MSG__New, newX );
-		else if( dd == 2 ) sprintf( gbuf[2], "%s %9.2f" , MSG__New, newX );
-		else if( dd == 1 ) sprintf( gbuf[2], "%s %9.1f" , MSG__New, newX );
-		else               sprintf( gbuf[2], "%s %9.0f" , MSG__New, newX );
+		if( dd == 4 )      sprintf( gbuf[2], "%s %10.4f" , MSG__New, newX );
+		else if( dd == 3 ) sprintf( gbuf[2], "%s %10.3f" , MSG__New, newX );
+		else if( dd == 2 ) sprintf( gbuf[2], "%s %10.2f" , MSG__New, newX );
+		else if( dd == 1 ) sprintf( gbuf[2], "%s %10.1f" , MSG__New, newX );
+		else               sprintf( gbuf[2], "%s %10.0f" , MSG__New, newX );
 		u8g_print( gbuf[0], gbuf[1], gbuf[2], gbuf[3] );
 	}
 	if( btnClicked() ) X = newX;  // touch will keep old value, only click will take new value
@@ -631,21 +638,53 @@ float set_float_auto_unit( float Xx, char *s, float max, float min, float dx ){
         return set_float( Xx*MM2INCH, ttl, NDDI, max*MM2INCH, min*MM2INCH, dx ) * INCH2MM;
 }
 
+void ez_config()
+{
+    int8_t sel=1, smin=1;
+    char menu[6][Nstr] = {
+        "Configuration",
+        "Go Back",
+        "Change Unit",
+        "Set Run Speed",
+        "Set Jog Speed",
+        "TBD X Pwr Feed",
+    };
+    char msg[Nstr];
+    float val, *pos;
+
+  for(;;){
+    clearBtnTouch();
+    select_from_menu( 6, menu, &sel, &smin );  // blocking
+    if( touchedR ) return;
+
+    switch(sel){
+        case 1:
+            clearBtnTouch();
+            return;
+        case 2:  // change unit, todo: ask for confirmation ?                                                             
+            if( gc_state.modal.units == Units::Mm )
+                sprintf( eznc_line, "G20" );
+            else
+                sprintf( eznc_line, "G21" );
+            gc_execute_line( eznc_line, Uart0);
+            return;
+        case 3:  // run speed, TBD
+            run_speed = set_float( run_speed, (char *)"Jog Speed (mm/min)", 0, 1500, 10, 10 );
+            break;
+        case 4:  // jog speed
+            jog_speed = set_float( jog_speed, (char *)"Jog Speed (mm/min)", 0, 1500, 10, 10 );
+            break;
+        case 5: // X Pwr Feed, distance
+            // parameters: direction, return: cut/lift-rapid-down
+            break;
+    }
+  }
+}
+
 //---------------------------------------------------------------------------------------
 void ez_set_pos()
 {
     log_info( "set pos");
-        // todo: start with current position
-        //   want a quick way to enter zero of single axis
-
-       //sprintf( msg, "Set As (%s)", (EZnc.Unit==INCH) ? "inch" : "mm" );
-        //ez_enter_pos( msg, (char *) "click to set" );
-        //if( btnClicked() ){
-        //    Serial.print( "[MSG:ezSetPos-" );    // add [MSG so that ugs doesn't complain                           
-        //    sprintf( eznc_line, "G10L20P1X%fY0Z%f", npos[0], npos[1] );
-        //    report_status_message(gc_execute_line(eznc_line, CLIENT_SERIAL), CLIENT_SERIAL);
-        //}
-
     int8_t sel=1, smin=1;
     char menu[10][Nstr] = {
         "Set Position",
@@ -732,18 +771,17 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
     int8_t sel=1, smin=1, junk=1;
     int progress=0, old_progress=0;
 
-    char menu[6][Nstr] = {
+    char menu[5][Nstr] = {
         "ezFluidNC",
         "Set Pos",
         "Run G-code",
-        "Change Unit",
+        "Config",
         "Back to DRO",
-        "Reset WebUi"
     };
     char msg[Nstr];
 
     clearBtnTouch();
-    select_from_menu( 6, menu, &sel, &smin );  // blocking
+    select_from_menu( 5, menu, &sel, &smin );  // blocking
     if( touchedR ) return;
 
     switch(sel){
@@ -773,18 +811,10 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
                 ez_check_cancel = true; 
         }
         return;
-    case 3:  // change unit, todo: ask and make it permament if desired                                                             
-        if( gc_state.modal.units == Units::Mm )
-            sprintf( eznc_line, "G20" );
-        else
-            sprintf( eznc_line, "G21" );
-        gc_execute_line( eznc_line, Uart0);
+    case 3:   // config
+        ez_config();
         return;
     case 4:
-        return;
-    case 5:
-        // confirm ?                                                                                                
-        //SPIFFS.remove("/index.html.gz");
         return;
     }
 }
