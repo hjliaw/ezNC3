@@ -179,10 +179,14 @@ int scroll( char *dest, char *src, unsigned int wi )  // non zero wi will initia
 }
 
 //--------------------------------------------------------------
-// spiffs
+// littlefs, with one level of directory navigation 
 
-String gcname[128];
+#define MAX_GCNAME 512
+#define MAX_DIRNAME 64
+String gcname[MAX_GCNAME];   // can this be unlimited ?
+String dirname[MAX_DIRNAME];
 int    Ngcf = 0;
+int    Ndir = 0;
 
 bool has_ending (std::string const &fullString, std::string const &ending) {
         if (fullString.length() >= ending.length()) {
@@ -205,14 +209,24 @@ int bound_int( int x, int min, int max, int flash ){
         return x;
 }
 
-void listLFS(){ // list local file system, save file names in gcname, set Ngcf
+bool is_gcode( std::string const &fullString ) {
+    return 
+    ( has_ending( fullString,  ".gc")  ||
+      has_ending( fullString,  ".ngc") ||
+      has_ending( fullString,  ".GC")  ||
+      has_ending( fullString,  ".NGC") );
+}
+
+void listLFS( char* path);
+
+void listLFS( char* path ){  // list local file system, save file names in gcname, set Ngcf
     char fname[256];
-    Ngcf = 0;
+    Ngcf = Ndir = 0;
 
     std::error_code ec;
-    FluidPath fpath { "", "littlefs", ec };
+    FluidPath fpath { path, "littlefs", ec };
     if (ec){
-        log_error( "no sd card, " << ec.message() );                
+        log_error( "no littlefs found, " << ec.message() );                
         return;
     }
 
@@ -226,19 +240,18 @@ void listLFS(){ // list local file system, save file names in gcname, set Ngcf
 
         String fname = String( dir_entry.path().c_str() );
 
-        if ( ! dir_entry.is_directory() && (
-            has_ending( dir_entry.path(),  ".gc") || 
-            has_ending( dir_entry.path(), ".ngc") ||
-            has_ending( dir_entry.path(),  ".GC") || 
-            has_ending( dir_entry.path(), ".NGC")
-            )
-        ){
+        if ( dir_entry.is_directory() ){
+            dirname[Ndir] = fname;
+            if (Ndir++ >= MAX_DIRNAME -1 ) break;
+        }
+
+        if ( ! dir_entry.is_directory() && is_gcode(dir_entry.path()) ){
             fname.replace( "/littlefs/", "");
             fname.replace( "/spiffs/",   "");    // not needed, but keep for now
             //log_info( "file: " << fname );
 
             gcname[Ngcf] = fname;
-            if (Ngcf++ >= 128-4) break;  // avoid overflow
+            if (Ngcf++ >= MAX_GCNAME-4) break;  // avoid overflow
         }                        
     }
 }
@@ -293,13 +306,14 @@ void ez_cancel_jog(){
 #ifdef INCLUDE_OLED_IO
 
 String ez_select_file(){
-    listLFS();
+
+    listLFS( (char *) "/" );
 
     if( Ngcf == 0 ){
         clearBtnTouch();
         u8g_print(  (char *) "No gc|ngc file",
+                    (char *) "",
                     (char *) "Upload va WiFi",
-                    (char *) " ",
                     (char *) "clck to cont" );
         while( ! btnClickedRlsd() && ! touchedR );
         clearBtnTouch();
@@ -308,12 +322,14 @@ String ez_select_file(){
         
     // try a new way to do sel menu, as number of file entries can be >16
     int sel =0, smin=0;
+    int directory = -1;  // -1=root, 1..Ndir  maps to ndirname[0..Ndir-1]
+
     while( ! btnClickedRlsd() && ! touchedR ){
         for( int i=0; i<4; i++ ) gcname[Ngcf+i] = "  ";
         strncpy( gbuf[0], "Select File", Nstr );
 
         for( int i=1; i<4; i++ )
-            // eznc first char='/', but fluidnc removed that
+            // eznc first char='/', but is removed here
             strncpy( gbuf[i]+1, gcname[smin+i-1].c_str(), Nstr-1 );
 
         gbuf[1][0] = gbuf[2][0] = gbuf[3][0] = ' ';
@@ -788,7 +804,7 @@ void ez_goto_pos()
     float val, *pos;
 
     clearBtnTouch();
-    select_from_menu( 10, menu, &sel, &smin );  // blocking
+    select_from_menu( 7, menu, &sel, &smin );  // blocking
     if( touchedR ) return;
 
     switch(sel){
