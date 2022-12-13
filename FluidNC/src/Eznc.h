@@ -19,8 +19,9 @@ extern ESP32Encoder encUI;
 
 extern volatile int clickCounterSW1, touchedL, touchedR;
 extern int cancelJog;
-
 extern volatile bool ez_check_cancel;
+
+extern String ez_gcfn;
 
 int volatile btnClicked( void );
 int volatile btnClickedRlsd( void );

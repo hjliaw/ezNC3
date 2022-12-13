@@ -109,7 +109,14 @@ void oledDRO() {
     oled->setFont(DejaVu_Sans_Mono_14);
 
     oled->setTextAlignment(TEXT_ALIGN_LEFT);
-    oled->drawString(0, 0, state_name());
+    if( infile ){
+        String p = infile->path();
+        p.replace("/littlefs/", "");
+        oled->drawString(0, 0, p);
+    }
+    else{
+        oled->drawString(0, 0, state_name());
+    }
 
     oled->setTextAlignment(TEXT_ALIGN_RIGHT);
     if( sys.state != State::Idle ){  // infile is not a good indicator, compromise

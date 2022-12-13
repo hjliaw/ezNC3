@@ -334,7 +334,7 @@ String ez_select_file( String p ){
 
     while( ! btnClickedRlsd() && ! touchedR ){
         for( int i=0; i<4; i++ ) gcname[Ngcf+i] = "  ";
-        //strncpy( gbuf[0], strcat("Gcode ", p.c_str()), Nstr );   // crash
+        //strncpy( gbuf[0], strcat("Gcode ", p.c_str()), Nstr );   // crashed ?
         strncpy( gbuf[0], "Gcode ", Nstr );
         strncpy( gbuf[0]+6, p.c_str(), Nstr-6 );
 
