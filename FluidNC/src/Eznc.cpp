@@ -210,7 +210,7 @@ void listLFS(){ // list local file system, save file names in gcname, set Ngcf
     Ngcf = 0;
 
     std::error_code ec;
-    FluidPath fpath { "", "spiffs", ec };
+    FluidPath fpath { "", "littlefs", ec };
     if (ec){
         log_error( "no sd card, " << ec.message() );                
         return;
@@ -223,15 +223,21 @@ void listLFS(){ // list local file system, save file names in gcname, set Ngcf
     }
 
     for (auto const& dir_entry : iter) {
+
+        String fname = String( dir_entry.path().c_str() );
+
         if ( ! dir_entry.is_directory() && (
-            has_ending( dir_entry.path().filename(),  ".gc") || 
-            has_ending( dir_entry.path().filename(), ".ngc") ||
-            has_ending( dir_entry.path().filename(),  ".GC") || 
-            has_ending( dir_entry.path().filename(), ".NGC")
+            has_ending( dir_entry.path(),  ".gc") || 
+            has_ending( dir_entry.path(), ".ngc") ||
+            has_ending( dir_entry.path(),  ".GC") || 
+            has_ending( dir_entry.path(), ".NGC")
             )
         ){
-            // String is Arduino defined class, filename is std::string
-            gcname[Ngcf] = String( dir_entry.path().filename().c_str() );
+            fname.replace( "/littlefs/", "");
+            fname.replace( "/spiffs/",   "");    // not needed, but keep for now
+            //log_info( "file: " << fname );
+
+            gcname[Ngcf] = fname;
             if (Ngcf++ >= 128-4) break;  // avoid overflow
         }                        
     }
@@ -330,13 +336,10 @@ String ez_select_file(){
     if( touchedR ) return "";
 
     clearBtnTouch();
-
-    // TODO
-    //if( confirm( (char *)"Run g-code", (char *)gcname[sel].c_str() ))
+    if( confirm( (char *)"Run g-code", (char *)gcname[sel].c_str() ))
             return gcname[sel];
-    //else
-    //        return "";
-
+    else
+            return "";
 }
 
 void u8g_print( char *s0, char *s1, char *s2, char *s3, int8_t sel, int8_t frame )
@@ -766,22 +769,69 @@ void ez_set_pos()
     }
 }
 
+
+
+void ez_goto_pos()
+{
+    log_info( "goto pos");
+    int8_t sel=1, smin=1;
+    char menu[7][Nstr] = {    //todo: arbitrary position, or "mark" position?
+        "Goto Position",
+        "Back to DRO",  // missed comma will pass compilier
+        "X =0",
+        "Y =0",
+        "Z =0",
+        "X=Y =0",
+        "X=Y=Z = 0",
+    };
+    char msg[Nstr];
+    float val, *pos;
+
+    clearBtnTouch();
+    select_from_menu( 10, menu, &sel, &smin );  // blocking
+    if( touchedR ) return;
+
+    switch(sel){
+        case 1:
+            clearBtnTouch();
+            return;
+        case 2:  // X=0
+            sprintf( eznc_line, "G1X0F%.0f", run_speed );   // todo: speed ?
+            break;
+        case 3:  // Y=0
+            sprintf( eznc_line, "G1Y0F%.0f", run_speed );
+            break;
+        case 4:  // Z=0
+            sprintf( eznc_line, "G1Z0F%.0f", run_speed );
+            break;
+        case 5:  // X=Y=0
+            sprintf( eznc_line, "G1X0Y0F%.0f", run_speed );
+            break;
+        case 6:  // X=Y=Z=0
+            sprintf( eznc_line, "G1X0Y0F%.0f", run_speed );
+            break;
+    }
+    gc_execute_line(eznc_line, Uart0);
+}
+
+
 void ez_menu()   // top level ui menu, only title line is auto-scrolled
 {
     int8_t sel=1, smin=1, junk=1;
     int progress=0, old_progress=0;
 
-    char menu[5][Nstr] = {
+    char menu[6][Nstr] = {
         "ezFluidNC",
-        "Set Pos",
-        "Run G-code",
+        "Set  Position",
+        "Goto Position",
+        "Run  G-code",
         "Config",
         "Back to DRO",
     };
     char msg[Nstr];
 
     clearBtnTouch();
-    select_from_menu( 5, menu, &sel, &smin );  // blocking
+    select_from_menu( 6, menu, &sel, &smin );  // blocking
     if( touchedR ) return;
 
     switch(sel){
@@ -789,18 +839,12 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
         ez_set_pos(); 
         return;
     case 2:
+        ez_goto_pos();
+        return;
+    case 3:  // run g-code
         ez_gcfn = ez_select_file();
         log_info( "file: " << ez_gcfn );
 
-        // if not return, refresh screen
-#if 0                                               
-        sprintf( gbuf[0], "Running" );
-        strncpy( gbuf[1], ez_gcfn.c_str(), Nstr );
-        sprintf( gbuf[2], "" );
-        sprintf( gbuf[3], "tchR to abrt" );
-        draw_menu(-1, &junk);
-        update_menu = 1;
-#endif
         run_t0 = millis();
         if (ez_gcfn[0] != 0 ){
                 char gcmd[128];
@@ -811,10 +855,10 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
                 ez_check_cancel = true; 
         }
         return;
-    case 3:   // config
+    case 4:   // config
         ez_config();
         return;
-    case 4:
+    case 5:   // back
         return;
     }
 }
