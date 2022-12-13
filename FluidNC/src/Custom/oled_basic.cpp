@@ -118,6 +118,8 @@ void oledDRO() {
         oled->drawString(0, 0, state_name());
     }
 
+    // perhaps, don't show X/Y/Z during infile
+    
     oled->setTextAlignment(TEXT_ALIGN_RIGHT);
     if( sys.state != State::Idle ){  // infile is not a good indicator, compromise
         int progress = 100;

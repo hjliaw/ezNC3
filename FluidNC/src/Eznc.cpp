@@ -34,6 +34,7 @@ String ez_select_file();
 String ez_gcfn;
 
 volatile bool ez_check_cancel =0;
+volatile bool ez_run_pwrfd =0;
 
 char   gbuf[16][Nstr];
 unsigned long jog_t0, ez_t0, ez_t1;
@@ -48,11 +49,11 @@ int32_t enc_cnt = 0;
 int   jog_stepsize = 1;
 float jog_speed = 200;  // mm/min
 float run_speed = 150;
-float pf_length = 20;   // mm
-int   pf_dir = 1;
-float pf_lift = 0.0;  // >0, lift-rapid, <=0, plunge-cut
 
 long run_t0;
+
+float mark_A[3] = {3, 0, 0};    // non-zero for test
+float mark_B[3] = {0, 0, 0};
 
 // utilities
 unsigned int str_length(const char* strp)    // display width
@@ -239,19 +240,13 @@ void listLFS( const char* path ){  // list local file system, save file names in
     }
 
     for (auto const& dir_entry : iter) {
-
         String fname = String( dir_entry.path().c_str() );
-
         fname.replace( "/littlefs/", "");
         fname.replace( "/spiffs/",   "");    // not needed, but keep for now
 
-        log_warn( "foo1: " << fname );
-
         if( strcmp( path, "/") != 0  ){   // 0=equal
-            fname.replace( path, "");   // replace All occurence !
+            fname.replace( path, "");     // will replace All occurence !
         }
-
-        log_warn( "foo2: " << fname );
 
         if ( dir_entry.is_directory() ){
             gcname[Ngcf++] = fname + "/";
@@ -433,7 +428,7 @@ void select_from_menu( uint8_t N, char (*ptr)[Nstr], int8_t *sp, int8_t *sminp, 
         if( sv != osv ){
             osv = sv;
             if( f2upd ) f2upd( ptr[0], sv );
-            log_debug( "sv= " << sv << ",txt= " << ptr[0] );
+            //log_debug( "sv= " << sv << ",txt= " << ptr[0] );
             scroll( gbuf[0], ptr[0], 1 ); // 1=init
         }
         draw_menu( sv, sminp );
@@ -721,7 +716,7 @@ void ez_config()
 //---------------------------------------------------------------------------------------
 void ez_set_pos()
 {
-    log_info( "set pos");
+    //log_info( "set pos");
     int8_t sel=1, smin=1;
     char menu[10][Nstr] = {
         "Set Position",
@@ -803,15 +798,93 @@ void ez_set_pos()
     }
 }
 
-
-
-void ez_goto_pos()
+void ez_pwr_fd()        // XY only ? move between A/B, wait 2-s at end point, until cancelled
 {
-    log_info( "goto pos");
+    char msg[Nstr];
+    clearBtnTouch();
+    int lcnt = 1;
+
+    while( ! touchedR ){    // may not work w/o return to protocol loop
+        sprintf( msg, "Power Feed  %3d", lcnt++ );
+        u8g_print( msg, (char *) "A <-- B" );
+
+        sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], run_speed );
+        if( ! touchedR ){
+            gc_execute_line(eznc_line, Uart0);
+            delay(1000);
+            while( sys.state == State::Cycle && ! touchedR );
+        }
+
+        for( int i=0; i<200; i++){
+            delay( 10 );
+            if( touchedR ) break;
+        }
+
+        u8g_print( msg, (char *) "A --> B" );
+        sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], run_speed );
+        if( ! touchedR ){
+            gc_execute_line(eznc_line, Uart0);
+            delay(1000);
+            while( sys.state == State::Cycle && ! touchedR );
+        }
+
+        for( int i=0; i<200; i++){
+            delay( 10 );
+            if( touchedR ) break;
+        }
+        //log_warn( "PwrFd " << lcnt );
+    }
+
+    if( touchedR ){
+        sys.abort = true;
+    }
+    clearBtnTouch();
+    return;
+}
+
+
+void ez_mark_pos()        // X/Y only ? todo: briefly show info screen
+{
     int8_t sel=1, smin=1;
-    char menu[7][Nstr] = {    //todo: arbitrary position, or "mark" position?
+#define Nm 4
+    char menu[Nm][Nstr] = {
+        "Mark Position",
+        "as A",
+        "as B",
+        "Cancel/Back"
+    };
+
+    clearBtnTouch();
+    select_from_menu( Nm, menu, &sel, &smin );  // blocking
+#undef Nm
+    if( touchedR ) return;
+
+    float* pos = get_mpos();
+    mpos_to_wpos(pos);  // always use wpos#1, keep it simple
+
+    switch(sel){
+        case 1:
+            for( int i=0; i<3; i++) mark_A[i] = pos[i];
+            return;
+        case 2:
+            for( int i=0; i<3; i++) mark_B[i] = pos[i];
+            return;
+        case 3:
+            clearBtnTouch();
+            return;
+    }
+}
+
+void ez_goto_pos()        // run_speed, perhaps add rapid position
+{
+    //log_info( "goto pos");
+    int8_t sel=1, smin=1;
+#define Nm 9
+    char menu[Nm][Nstr] = {    //todo: arbitrary position, or "mark" position?
         "Goto Position",
         "Back to DRO",  // missed comma will pass compilier
+        "Mark A (XY)",
+        "Mark B (XY)",
         "X =0",
         "Y =0",
         "Z =0",
@@ -822,93 +895,90 @@ void ez_goto_pos()
     float val, *pos;
 
     clearBtnTouch();
-    select_from_menu( 7, menu, &sel, &smin );  // blocking
+    select_from_menu( Nm, menu, &sel, &smin );  // blocking
+#undef Nm
     if( touchedR ) return;
 
     switch(sel){
         case 1:
             clearBtnTouch();
             return;
-        case 2:  // X=0
+        case 2:
+            sprintf( eznc_line, "G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], run_speed );
+            break;
+        case 3:
+            sprintf( eznc_line, "G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], run_speed );
+            break;
+        case 4:  // X=0
             sprintf( eznc_line, "G1X0F%.0f", run_speed );   // todo: speed ?
             break;
-        case 3:  // Y=0
+        case 5:  // Y=0
             sprintf( eznc_line, "G1Y0F%.0f", run_speed );
             break;
-        case 4:  // Z=0
+        case 6:  // Z=0
             sprintf( eznc_line, "G1Z0F%.0f", run_speed );
             break;
-        case 5:  // X=Y=0
+        case 7:  // X=Y=0
             sprintf( eznc_line, "G1X0Y0F%.0f", run_speed );
             break;
-        case 6:  // X=Y=Z=0
+        case 8:  // X=Y=Z=0
             sprintf( eznc_line, "G1X0Y0F%.0f", run_speed );
             break;
     }
     gc_execute_line(eznc_line, Uart0);
 }
 
-
 void ez_menu()   // top level ui menu, only title line is auto-scrolled
 {
     int8_t sel=1, smin=1, junk=1;
     int progress=0, old_progress=0;
 
-    char menu[6][Nstr] = {
+    // todo: assign function with title at the same time
+#define Nm 8
+    char menu[Nm][Nstr] = {
         "ezFluidNC",
-        "Set  Position",
-        "Goto Position",
         "Run  G-code",
+        "Power Feed X/Y",
+        "Mark Position",
+        "Goto Position",
+        "Set  Position",
         "Config",
         "Back to DRO",
     };
     char msg[Nstr];
 
     clearBtnTouch();
-    select_from_menu( 6, menu, &sel, &smin );  // blocking
+    select_from_menu( Nm, menu, &sel, &smin );  // blocking
+#undef Nm
+
     if( touchedR ) return;
 
     switch(sel){
-    case 1:
-        ez_set_pos(); 
-        return;
-    case 2:
-        ez_goto_pos();
-        return;
-    case 3:  // run g-code
+    case 1:  // run g-code
         ez_gcfn = ez_select_file( "/");
-        log_info( "file: " << ez_gcfn );
-
-        run_t0 = millis();
         if (ez_gcfn[0] != 0 ){
                 char gcmd[128];
-                log_info( "run file " << ez_gcfn  );
                 sprintf( gcmd, "$localfs/run=%s", ez_gcfn.c_str() );
                 execute_line( gcmd, Uart0, WebUI::AuthenticationLevel::LEVEL_GUEST );
-                log_info( "done file " << ez_gcfn  );
                 ez_check_cancel = true; 
         }
         return;
-    case 4:   // config
-        ez_config();
-        return;
-    case 5:   // back
-        return;
+    case 2: ez_pwr_fd();   return;
+    case 3: ez_mark_pos(); return;
+    case 4: ez_goto_pos(); return;
+    case 5: ez_set_pos();  return;
+    case 6: ez_config();   return;
+    case 7: return;
     }
 }
 
 #endif
 
 //-------------------------------------------------------------------------
-
-// todo: disable jogging when running, allow SWR to abort
-
 // currently, eznc_dispatch is really just ez_dro
-unsigned int lcnt = 0;
+
 void ez_dro()
 {
-    //if( (lcnt % 1000) == 0) log_warn( "HJL: ez_dro loop " << lcnt );
-
     if( sys.state == State::Idle || sys.state == State::Jog ){
         enc_cnt = readEncoder(1);  // 1=no double reads
         if( enc_cnt != 0 ){
@@ -929,7 +999,7 @@ void ez_dro()
         if( touchedL ){
             jog_axis = (jog_axis+1) % 3;
             update_dro = 1;
-            log_info( "SWL jog axis " << jog_axis );
+            //log_info( "SWL jog axis " << jog_axis );
         }
             
         if( touchedR ){
@@ -937,20 +1007,18 @@ void ez_dro()
                 jog_stepsize = jog_stepsize << 1;
                 if( jog_stepsize > 4 ) jog_stepsize = 1;
                 update_dro = 1;
-                log_info( "SWR jog step " << jog_stepsize );
+                //log_info( "SWR jog step " << jog_stepsize );
             }
-            if( sys.state == State::Cycle ){
-                log_warn( "HJL: SWR abort, loop " << lcnt  );
+            if( sys.state == State::Cycle )
                 sys.abort = true;
-            }
-        }   
+        }
 
         if( clickCounterSW1 ){  // click main button in DRO enters ui menu mode
             uimenu_active = 1;
             ez_menu();
             uimenu_active = 0;
             update_dro = 1;
-            log_warn( "HJL: returned from ez_menu" );
+            //log_warn( "HJL: returned from ez_menu" );
         }
         clearBtnTouch();            
     }
@@ -958,8 +1026,6 @@ void ez_dro()
 
 void ez_ui()  // NOT used, current ui_menu is blocking
 {
-//    if( (lcnt % 1000) == 0) log_warn( "HJL: ez_ui, loop " << lcnt );
-
 #ifndef NO_ENCODER
     enc_cnt = readEncoder(0);
     if( enc_cnt != 0 ){
@@ -974,7 +1040,7 @@ void ez_ui()  // NOT used, current ui_menu is blocking
         }
             
         if( clickCounterSW1 ){
-            log_info( "exit ui menu..." );
+            //log_info( "exit ui menu..." );
             uimenu_active = 0;
             update_dro = 1;
         }
@@ -985,20 +1051,16 @@ void ez_ui()  // NOT used, current ui_menu is blocking
 // called by protocal loop, try to be as short as possible
 // TODO; disable jogging when running ?
 
-// gee, once gcode file is started fron eznc, this is not called
-// bcz (different from esp_grbl) Protocol loop structure
-
 bool gcode_started = false;
 
 void eznc_dispatch( void )    // top level dispatcher
 {    
-    lcnt++;
-    //if( (lcnt % 1000) == 0) log_warn( "HJL: eznc_dispatch, loop " << lcnt );
-
+    // tricky to get it right
     if( ez_check_cancel && sys.state == State::Cycle ) gcode_started = true;
     if( ez_check_cancel && gcode_started && sys.state == State::Idle  ){
         ez_check_cancel = false;
         gcode_started = false;
+        ez_gcfn[0] == 0;   // no good way to clear this w/o changing FluidNC
     }
 
     if( uimenu_active )

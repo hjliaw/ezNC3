@@ -22,6 +22,8 @@ extern int cancelJog;
 extern volatile bool ez_check_cancel;
 
 extern String ez_gcfn;
+extern float mark_A[3];
+extern float mark_B[3];
 
 int volatile btnClicked( void );
 int volatile btnClickedRlsd( void );
