@@ -21,6 +21,8 @@ Eznc.cpp - oled + encoder + switch interface
 #include "Custom/oled_io.h"  // for calling oled directly
 #endif
 
+String ez_select_file( String p );
+
 extern volatile int uimenu_active;
 extern volatile int update_dro;
 extern volatile int update_menu;
@@ -209,17 +211,17 @@ int bound_int( int x, int min, int max, int flash ){
         return x;
 }
 
-bool is_gcode( std::string const &fullString ) {
+bool is_gcode( std::string const & p ) {
     return 
-    ( has_ending( fullString,  ".gc")  ||
-      has_ending( fullString,  ".ngc") ||
-      has_ending( fullString,  ".GC")  ||
-      has_ending( fullString,  ".NGC") );
+    ( has_ending( p,  ".gc")  ||
+      has_ending( p,  ".ngc") ||
+      has_ending( p,  ".GC")  ||
+      has_ending( p,  ".NGC") );
 }
 
-void listLFS( char* path);
+void listLFS( const char* path);
 
-void listLFS( char* path ){  // list local file system, save file names in gcname, set Ngcf
+void listLFS( const char* path ){  // list local file system, save file names in gcname, set Ngcf
     char fname[256];
     Ngcf = Ndir = 0;
 
@@ -240,19 +242,25 @@ void listLFS( char* path ){  // list local file system, save file names in gcnam
 
         String fname = String( dir_entry.path().c_str() );
 
-        if ( dir_entry.is_directory() ){
-            dirname[Ndir] = fname;
-            if (Ndir++ >= MAX_DIRNAME -1 ) break;
+        fname.replace( "/littlefs/", "");
+        fname.replace( "/spiffs/",   "");    // not needed, but keep for now
+
+        log_warn( "foo1: " << fname );
+
+        if( strcmp( path, "/") != 0  ){   // 0=equal
+            fname.replace( path, "");   // replace All occurence !
         }
 
-        if ( ! dir_entry.is_directory() && is_gcode(dir_entry.path()) ){
-            fname.replace( "/littlefs/", "");
-            fname.replace( "/spiffs/",   "");    // not needed, but keep for now
-            //log_info( "file: " << fname );
+        log_warn( "foo2: " << fname );
 
-            gcname[Ngcf] = fname;
-            if (Ngcf++ >= MAX_GCNAME-4) break;  // avoid overflow
-        }                        
+        if ( dir_entry.is_directory() ){
+            gcname[Ngcf++] = fname + "/";
+        }
+        else{
+            if( is_gcode(dir_entry.path()) && fname.indexOf("/") < 0 )
+                gcname[Ngcf++] = fname;
+        }
+        if (Ngcf >= MAX_GCNAME-4) break;  // avoid overflow
     }
 }
 
@@ -305,15 +313,15 @@ void ez_cancel_jog(){
 
 #ifdef INCLUDE_OLED_IO
 
-String ez_select_file(){
+String ez_select_file( String p ){
 
-    listLFS( (char *) "/" );
+    listLFS( p.c_str() );
 
     if( Ngcf == 0 ){
         clearBtnTouch();
-        u8g_print(  (char *) "No gc|ngc file",
-                    (char *) "",
+        u8g_print(  (char *) "No gc|ngc file",    // prepare for scrolling text
                     (char *) "Upload va WiFi",
+                    (char *) "",
                     (char *) "clck to cont" );
         while( ! btnClickedRlsd() && ! touchedR );
         clearBtnTouch();
@@ -326,7 +334,9 @@ String ez_select_file(){
 
     while( ! btnClickedRlsd() && ! touchedR ){
         for( int i=0; i<4; i++ ) gcname[Ngcf+i] = "  ";
-        strncpy( gbuf[0], "Select File", Nstr );
+        //strncpy( gbuf[0], strcat("Gcode ", p.c_str()), Nstr );   // crash
+        strncpy( gbuf[0], "Gcode ", Nstr );
+        strncpy( gbuf[0]+6, p.c_str(), Nstr-6 );
 
         for( int i=1; i<4; i++ )
             // eznc first char='/', but is removed here
@@ -352,10 +362,18 @@ String ez_select_file(){
     if( touchedR ) return "";
 
     clearBtnTouch();
-    if( confirm( (char *)"Run g-code", (char *)gcname[sel].c_str() ))
-            return gcname[sel];
+
+    if( gcname[sel].endsWith("/"))
+        return gcname[sel] + ez_select_file( gcname[sel] );
     else
-            return "";
+        return gcname[sel];
+
+    // confirm sometimes gets in my way !
+
+    //if( confirm( (char *)"Run g-code", (char *)gcname[sel].c_str() ))
+    //        return gcname[sel];
+    //else
+    //        return "";
 }
 
 void u8g_print( char *s0, char *s1, char *s2, char *s3, int8_t sel, int8_t frame )
@@ -858,7 +876,7 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
         ez_goto_pos();
         return;
     case 3:  // run g-code
-        ez_gcfn = ez_select_file();
+        ez_gcfn = ez_select_file( "/");
         log_info( "file: " << ez_gcfn );
 
         run_t0 = millis();
