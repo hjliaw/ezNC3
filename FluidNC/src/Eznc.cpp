@@ -52,8 +52,8 @@ float run_speed = 150;
 
 long run_t0;
 
-float mark_A[3] = {3, 0, 0};    // non-zero for test
-float mark_B[3] = {0, 0, 0};
+float mark_A[3] = {0, 0, 0};
+float mark_B[3] = {2, 0, 0};    // non-zero for test
 
 // utilities
 unsigned int str_length(const char* strp)    // display width
@@ -716,9 +716,11 @@ void ez_config()
 //---------------------------------------------------------------------------------------
 void ez_set_pos()
 {
-    //log_info( "set pos");
+
+    // set A/B position need to enter 3 numbers
+#define Nm 10
     int8_t sel=1, smin=1;
-    char menu[10][Nstr] = {
+    char menu[Nm][Nstr] = {
         "Set Position",
         "Back to DRO",  // missed comma will pass compilier
         "X=Y=Z = 0",
@@ -739,7 +741,7 @@ void ez_set_pos()
         // todo: add position value to menu string
 
         clearBtnTouch();
-        select_from_menu( 10, menu, &sel, &smin );  // blocking
+        select_from_menu( Nm, menu, &sel, &smin );  // blocking
         if( touchedR ) return;
 
         switch(sel){
@@ -796,50 +798,51 @@ void ez_set_pos()
                 break;
         }
     }
+#undef Nm
 }
 
-void ez_pwr_fd()        // XY only ? move between A/B, wait 2-s at end point, until cancelled
+#define Npf_wait 50  // 100  for 2-s, speedup for test 
+char pfmsg[4][Nstr];
+int  pflcnt = 1;
+int  pflcntold = 0;
+bool cmd_issued = false;
+
+void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, until cancelled
 {
-    char msg[Nstr];
-    clearBtnTouch();
-    int lcnt = 1;
-
-    while( ! touchedR ){    // may not work w/o return to protocol loop
-        sprintf( msg, "Power Feed  %3d", lcnt++ );
-        u8g_print( msg, (char *) "A <-- B" );
-
-        sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], run_speed );
-        if( ! touchedR ){
-            gc_execute_line(eznc_line, Uart0);
-            delay(1000);
-            while( sys.state == State::Cycle && ! touchedR );
-        }
-
-        for( int i=0; i<200; i++){
-            delay( 10 );
-            if( touchedR ) break;
-        }
-
-        u8g_print( msg, (char *) "A --> B" );
-        sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], run_speed );
-        if( ! touchedR ){
-            gc_execute_line(eznc_line, Uart0);
-            delay(1000);
-            while( sys.state == State::Cycle && ! touchedR );
-        }
-
-        for( int i=0; i<200; i++){
-            delay( 10 );
-            if( touchedR ) break;
-        }
-        //log_warn( "PwrFd " << lcnt );
-    }
-
     if( touchedR ){
         sys.abort = true;
+        ez_run_pwrfd = false;
+        clearTouch();
+        return;
     }
-    clearBtnTouch();
-    return;
+
+    if( pflcntold != pflcnt ){
+        log_warn( "pflcnt " << pflcnt );
+        sprintf( pfmsg[0], "Power Feed  %3d", pflcnt );
+        pfmsg[1][0] = 0;
+        pfmsg[2][0] = 0;
+        sprintf( pfmsg[3], "touchR to stop" );
+        u8g_print( pfmsg[0], pfmsg[1], pfmsg[2], pfmsg[3] );
+        pflcntold = pflcnt;
+    }
+
+    if( sys.state == State::Idle && ! cmd_issued && ! touchedR ){
+        sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], run_speed );
+        gc_execute_line(eznc_line, Uart0);
+
+        sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], run_speed );
+        gc_execute_line(eznc_line, Uart0);
+        cmd_issued = true;
+
+        log_warn( "pf cmd issued " << pflcnt );
+    }
+
+    if( cmd_issued && sys.state == State::Cycle ){
+        log_warn( "pf cmd done " << pflcnt );
+
+        cmd_issued = false;
+        pflcnt++;
+    }
 }
 
 
@@ -963,7 +966,12 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
                 ez_check_cancel = true; 
         }
         return;
-    case 2: ez_pwr_fd();   return;
+    case 2:
+        pflcnt = 1;
+        pflcntold = 0;
+        ez_run_pwrfd = true;   // can not block, set flag and return right away
+        clearBtnTouch();
+        return;
     case 3: ez_mark_pos(); return;
     case 4: ez_goto_pos(); return;
     case 5: ez_set_pos();  return;
@@ -1061,6 +1069,11 @@ void eznc_dispatch( void )    // top level dispatcher
         ez_check_cancel = false;
         gcode_started = false;
         ez_gcfn[0] == 0;   // no good way to clear this w/o changing FluidNC
+    }
+
+    if( ez_run_pwrfd ){
+        ez_pwr_fd();
+        return;      // simplify, don't show DRO while running PwrFd
     }
 
     if( uimenu_active )
