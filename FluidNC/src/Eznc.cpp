@@ -55,7 +55,7 @@ float tool_dia = 6;
 long run_t0;
 
 float mark_A[3] = {0, 0, 0};
-float mark_B[3] = {10, 0, 0};    // non-zero for test
+float mark_B[3] = {10, 10, 0};    // non-zero for test
 
 // utilities
 unsigned int str_length(const char* strp)    // display width
@@ -838,13 +838,17 @@ void push_gcode( String gc )
 
 void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, until cancelled
 {
+    static int cmd_idx;
+
     if( touchedR ){
         sys.abort = true;
         ez_pwr_fd_reset();
         return;
     }
 
-    if( sys.state == State::Idle && !cmd_issued && cmd_cnt == 0 ){  // init
+    if( !ez_run_pwrfd ) return;
+
+    if( cmd_cnt == 0 && sys.state == State::Idle && !cmd_issued ){  // init
         float dx, dy, dA, dB;
         dx = mark_A[0] - mark_B[0];
         dy = mark_A[1] - mark_B[1];
@@ -864,7 +868,7 @@ void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, unt
                 sprintf( pfmsg[0], "Power Feed X" );
             else
                 sprintf( pfmsg[0], "Power Feed Y" );
-            
+                        
             if( dB < dA ){
                 sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], run_speed );
                 push_gcode( String( eznc_line ) );
@@ -879,31 +883,54 @@ void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, unt
             }
         }
         else{  // 2D sweep with 75% over_lap, snap to nearest point first
+            // todo: added C/D point as well
+            float p0[2], p1[2];
             sprintf( pfmsg[0], "Power Feed X/Y" );
-            if( dB < dA ){
-                sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], run_speed );
-                dx = mark_A[0] - mark_B[0];
-                dy = mark_A[1] - mark_B[1];
+
+            for( int i=0; i<2; i++ ){
+                dA = fabs(pos[i]-mark_A[i]);
+                dB = fabs(pos[i]-mark_B[i]);
+                if( dA < dB ){
+                    p0[i] = mark_A[i];  p1[i] = mark_B[i];
+                } else {
+                    p0[i] = mark_B[i];  p1[i] = mark_A[i];
+                }
             }
-            else{
-                sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], run_speed );
-                dx = mark_B[0] - mark_A[0];
-                dy = mark_B[1] - mark_A[1];
-            }
+            sprintf( eznc_line, "X/Y  p0=[%.2f, %.2f]  p1=[%.2f, %.2f", p0[0], p0[1], p1[0], p1[1]);
+            log_warn( eznc_line );
+
+            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", p0[0], p0[1], run_speed );
             push_gcode( String( eznc_line ) );
 
             // always sweep x-first
-            float ystep = tool_dia / 0.75;
+            dx = p1[0] - p0[0];
+            dy = p1[1] - p0[1];
+            float ystep = tool_dia * 0.75;
             if( dy < 0 ) ystep = -ystep;
             int Ny = abs(lroundf(dy/ystep));
 
+            log_info( "     dx=" << dx );
+            log_info( "     dy=" << dy );
+            log_info( "  ystep=" << ystep );
+            log_info( "     Ny=" << Ny );
+
+            sprintf( eznc_line, "G91G1X%.4fF%.0f", dx, run_speed );  // first x-cut
+            push_gcode( String( eznc_line ) );
+
             for( int i=0; i < Ny; i++ ){
-                sprintf( eznc_line, "G91G1X%.4fF%.0f", (i%2==0) ? dx:-dx, run_speed );
-                push_gcode( String( eznc_line ) );
-                sprintf( eznc_line, "G91G1Y%.4fF%.0f", ystep, run_speed );
+                if( fabs( p0[1]+i*ystep - p1[1] ) > tool_dia ){
+                    sprintf( eznc_line, "G91G1Y%.4fF%.0f", ystep, run_speed );
+                    push_gcode( String( eznc_line ) );
+
+                    sprintf( eznc_line, "G91G1X%.4fF%.0f", (i%2==0) ? -dx:+dx, run_speed );
+                    push_gcode( String( eznc_line ) );
+                }
             }
         }
+        
+        cmd_idx = 0;
 
+        log_info( pfmsg[0] );
         log_info( "cmd list");
         for( int i=0; i<cmd_cnt; i++){
             log_info( "  " << i << "  " << gcname[i] );
@@ -911,54 +938,44 @@ void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, unt
     }
 
     // try dual cmd, single loop
-    // implemented as state machine
+    // implemented a simple g-code sender here
 
-    if( sys.state == State::Idle && ! cmd_issued && ! touchedR ){
+    if( ! touchedR && sys.state == State::Idle && ! cmd_issued ){
     
-        pfmsg[1][0] = pfmsg[2][0] = 0;
-        sprintf( pfmsg[3], "touchR to stop" );
-        u8g_print( pfmsg[0], pfmsg[1], pfmsg[2], pfmsg[3] );
-
-        // test X- or Y- feed
-        for( int i=0; i<2; i++){
-            strncpy( eznc_line, gcname[i].c_str(), 256 );
+        // two commands a time
+        if( cmd_idx < cmd_cnt ){
+            strncpy( eznc_line, gcname[cmd_idx++].c_str(), 256 );
+            gc_execute_line( eznc_line, Uart0);
+        }
+        if( cmd_idx < cmd_cnt ){
+            strncpy( eznc_line, gcname[cmd_idx++].c_str(), 256 );
             gc_execute_line( eznc_line, Uart0);
         }
 
         cmd_issued = true;
         cmd_started = false;
         cmd_finished = false;
-        //log_warn( "ez pwr cmd issued");
     }
 
     if( cmd_issued && ! cmd_started && sys.state == State::Cycle ){   // started
-        //log_warn( "ez pwr feed started");
+        //log_warn( "ez pwr feed cmd started");
         cmd_started = true;
     }
 
-    if( cmd_started && sys.state == State::Idle ){   // finished
-        //log_warn( "ez pwr feed finished");
-        ez_pwr_fd_reset();
-        return;
-    }
+    if( cmd_started && sys.state == State::Idle ){   // finished, ready for more command
+        //log_warn( "ez pwr feed cmd finished");
 
-#if 0
-    // single cmd approach, start at point-A, will finish in no time ! the following checks will fail
-    if( cmd_issued && sys.state == State::Cycle ){   // ensure cmd is consumed
-        cmd_issued = false;
-        log_warn( " cmd_issued " << cmd_issued );
-    }
-
-    if( !cmd_finished && !cmd_issued && sys.state == State::Idle ){
-        delay_ms(10);
-        log_warn( " dly " << pfwait_cnt );
-
-        if( ++pfwait_cnt > Npf_wait ){
+        if( cmd_idx >= cmd_cnt ){
+            ez_pwr_fd_reset();     // terminate
+        }
+        else{
+            cmd_issued = false;
+            cmd_started = false;
             cmd_finished = true;
-            pflcnt++;
         }
     }
-#endif
+
+
 }
 
 
