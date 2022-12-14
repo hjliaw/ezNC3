@@ -807,20 +807,33 @@ char pfmsg[4][Nstr];
 int  pflcnt = 1;
 int  pflcntold = 0;
 int  pfwait_cnt = 0;
+
 bool cmd_issued = false;
 bool cmd_started = false;
 bool cmd_finished = true;   // initial state
+int  cmd_cnt = 0;
 
 void ez_pwr_fd_reset()
 {
     cmd_finished = true;
     cmd_issued   = false;
     cmd_started  = false;
+    cmd_cnt = 0;
 
     ez_run_pwrfd = false;
     uimenu_active = 0;
     update_dro = 1;  // force screen update
     clearBtnTouch();
+}
+
+void push_gcode( String gc )
+{
+    if(cmd_cnt < 500 ){
+        gcname[cmd_cnt++] = gc;
+    }
+    else{
+        log_warn( "too many g-code lines, some are chopped off");
+    }
 }
 
 void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, until cancelled
@@ -831,20 +844,86 @@ void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, unt
         return;
     }
 
+    if( sys.state == State::Idle && !cmd_issued && cmd_cnt == 0 ){  // init
+        float dx, dy, dA, dB;
+        dx = mark_A[0] - mark_B[0];
+        dy = mark_A[1] - mark_B[1];
+
+        // where am I, closer to mark-A or mark-B
+        float* pos = get_mpos();
+        mpos_to_wpos(pos);
+
+        dA =  (pos[0]-mark_A[0])*(pos[0]-mark_A[0])
+            + (pos[1]-mark_A[1])*(pos[1]-mark_A[1]);
+
+        dB =  (pos[0]-mark_B[0])*(pos[0]-mark_B[0])
+            + (pos[1]-mark_B[1])*(pos[1]-mark_B[1]);
+
+        if( fabs(dx) < 1e-4 || fabs(dy) < 1e-4 ){   // simple x or y feed
+            if( fabs(dy) < 1e-4 )
+                sprintf( pfmsg[0], "Power Feed X" );
+            else
+                sprintf( pfmsg[0], "Power Feed Y" );
+            
+            if( dB < dA ){
+                sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], run_speed );
+                push_gcode( String( eznc_line ) );
+                sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], run_speed );
+                push_gcode( String( eznc_line ) );
+            }
+            else{
+                sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], run_speed );
+                push_gcode( String( eznc_line ) );
+                sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], run_speed );
+                push_gcode( String( eznc_line ) );
+            }
+        }
+        else{  // 2D sweep with 75% over_lap, snap to nearest point first
+            sprintf( pfmsg[0], "Power Feed X/Y" );
+            if( dB < dA ){
+                sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], run_speed );
+                dx = mark_A[0] - mark_B[0];
+                dy = mark_A[1] - mark_B[1];
+            }
+            else{
+                sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], run_speed );
+                dx = mark_B[0] - mark_A[0];
+                dy = mark_B[1] - mark_A[1];
+            }
+            push_gcode( String( eznc_line ) );
+
+            // always sweep x-first
+            float ystep = tool_dia / 0.75;
+            if( dy < 0 ) ystep = -ystep;
+            int Ny = abs(lroundf(dy/ystep));
+
+            for( int i=0; i < Ny; i++ ){
+                sprintf( eznc_line, "G91G1X%.4fF%.0f", (i%2==0) ? dx:-dx, run_speed );
+                push_gcode( String( eznc_line ) );
+                sprintf( eznc_line, "G91G1Y%.4fF%.0f", ystep, run_speed );
+            }
+        }
+
+        log_info( "cmd list");
+        for( int i=0; i<cmd_cnt; i++){
+            log_info( "  " << i << "  " << gcname[i] );
+        }
+    }
+
     // try dual cmd, single loop
     // implemented as state machine
 
     if( sys.state == State::Idle && ! cmd_issued && ! touchedR ){
-
-        sprintf( pfmsg[0], "Power Feed X/Y" );
+    
         pfmsg[1][0] = pfmsg[2][0] = 0;
         sprintf( pfmsg[3], "touchR to stop" );
         u8g_print( pfmsg[0], pfmsg[1], pfmsg[2], pfmsg[3] );
 
-        sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], run_speed );
-        gc_execute_line(eznc_line, Uart0);
-        sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], run_speed );
-        gc_execute_line(eznc_line, Uart0);
+        // test X- or Y- feed
+        for( int i=0; i<2; i++){
+            strncpy( eznc_line, gcname[i].c_str(), 256 );
+            gc_execute_line( eznc_line, Uart0);
+        }
 
         cmd_issued = true;
         cmd_started = false;
