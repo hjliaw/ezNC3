@@ -50,10 +50,12 @@ int   jog_stepsize = 1;
 float jog_speed = 200;  // mm/min
 float run_speed = 150;
 
+float tool_dia = 6;
+
 long run_t0;
 
 float mark_A[3] = {0, 0, 0};
-float mark_B[3] = {2, 0, 0};    // non-zero for test
+float mark_B[3] = {10, 0, 0};    // non-zero for test
 
 // utilities
 unsigned int str_length(const char* strp)    // display width
@@ -242,7 +244,6 @@ void listLFS( const char* path ){  // list local file system, save file names in
     for (auto const& dir_entry : iter) {
         String fname = String( dir_entry.path().c_str() );
         fname.replace( "/littlefs/", "");
-        fname.replace( "/spiffs/",   "");    // not needed, but keep for now
 
         if( strcmp( path, "/") != 0  ){   // 0=equal
             fname.replace( path, "");     // will replace All occurence !
@@ -677,9 +678,9 @@ void ez_config()
         "Configuration",
         "Go Back",
         "Change Unit",
-        "Set Run Speed",
-        "Set Jog Speed",
-        "TBD X Pwr Feed",
+        "Run Speed",
+        "Jog Speed",
+        "Tool Diameter",
     };
     char msg[Nstr];
     float val, *pos;
@@ -700,14 +701,14 @@ void ez_config()
                 sprintf( eznc_line, "G21" );
             gc_execute_line( eznc_line, Uart0);
             return;
-        case 3:  // run speed, TBD
-            run_speed = set_float( run_speed, (char *)"Jog Speed (mm/min)", 0, 1500, 10, 10 );
+        case 3:  // run speed
+            run_speed = set_float( run_speed, (char *)"Run Speed (mm/min)", 0, 1500, 10, 10 );
             break;
         case 4:  // jog speed
             jog_speed = set_float( jog_speed, (char *)"Jog Speed (mm/min)", 0, 1500, 10, 10 );
             break;
-        case 5: // X Pwr Feed, distance
-            // parameters: direction, return: cut/lift-rapid-down
+        case 5: // tool diameter
+            tool_dia = set_float( tool_dia, (char *)"Tool Dia. (mm)", 3, 100, 0.1, 1 );
             break;
     }
   }
@@ -805,44 +806,80 @@ void ez_set_pos()
 char pfmsg[4][Nstr];
 int  pflcnt = 1;
 int  pflcntold = 0;
+int  pfwait_cnt = 0;
 bool cmd_issued = false;
+bool cmd_started = false;
+bool cmd_finished = true;   // initial state
+
+void ez_pwr_fd_reset()
+{
+    cmd_finished = true;
+    cmd_issued   = false;
+    cmd_started  = false;
+
+    ez_run_pwrfd = false;
+    uimenu_active = 0;
+    update_dro = 1;  // force screen update
+    clearBtnTouch();
+}
 
 void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, until cancelled
 {
     if( touchedR ){
         sys.abort = true;
-        ez_run_pwrfd = false;
-        clearTouch();
+        ez_pwr_fd_reset();
         return;
     }
 
-    if( pflcntold != pflcnt ){
-        log_warn( "pflcnt " << pflcnt );
-        sprintf( pfmsg[0], "Power Feed  %3d", pflcnt );
-        pfmsg[1][0] = 0;
-        pfmsg[2][0] = 0;
-        sprintf( pfmsg[3], "touchR to stop" );
-        u8g_print( pfmsg[0], pfmsg[1], pfmsg[2], pfmsg[3] );
-        pflcntold = pflcnt;
-    }
+    // try dual cmd, single loop
+    // implemented as state machine
 
     if( sys.state == State::Idle && ! cmd_issued && ! touchedR ){
+
+        sprintf( pfmsg[0], "Power Feed X/Y" );
+        pfmsg[1][0] = pfmsg[2][0] = 0;
+        sprintf( pfmsg[3], "touchR to stop" );
+        u8g_print( pfmsg[0], pfmsg[1], pfmsg[2], pfmsg[3] );
+
         sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], run_speed );
         gc_execute_line(eznc_line, Uart0);
-
         sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], run_speed );
         gc_execute_line(eznc_line, Uart0);
+
         cmd_issued = true;
-
-        log_warn( "pf cmd issued " << pflcnt );
+        cmd_started = false;
+        cmd_finished = false;
+        //log_warn( "ez pwr cmd issued");
     }
 
-    if( cmd_issued && sys.state == State::Cycle ){
-        log_warn( "pf cmd done " << pflcnt );
+    if( cmd_issued && ! cmd_started && sys.state == State::Cycle ){   // started
+        //log_warn( "ez pwr feed started");
+        cmd_started = true;
+    }
 
+    if( cmd_started && sys.state == State::Idle ){   // finished
+        //log_warn( "ez pwr feed finished");
+        ez_pwr_fd_reset();
+        return;
+    }
+
+#if 0
+    // single cmd approach, start at point-A, will finish in no time ! the following checks will fail
+    if( cmd_issued && sys.state == State::Cycle ){   // ensure cmd is consumed
         cmd_issued = false;
-        pflcnt++;
+        log_warn( " cmd_issued " << cmd_issued );
     }
+
+    if( !cmd_finished && !cmd_issued && sys.state == State::Idle ){
+        delay_ms(10);
+        log_warn( " dly " << pfwait_cnt );
+
+        if( ++pfwait_cnt > Npf_wait ){
+            cmd_finished = true;
+            pflcnt++;
+        }
+    }
+#endif
 }
 
 
@@ -941,7 +978,7 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
     char menu[Nm][Nstr] = {
         "ezFluidNC",
         "Run  G-code",
-        "Power Feed X/Y",
+        "Power Feed",
         "Mark Position",
         "Goto Position",
         "Set  Position",
@@ -971,6 +1008,7 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
         pflcntold = 0;
         ez_run_pwrfd = true;   // can not block, set flag and return right away
         clearBtnTouch();
+        uimenu_active = 1;  // stops DRO
         return;
     case 3: ez_mark_pos(); return;
     case 4: ez_goto_pos(); return;
@@ -1024,8 +1062,10 @@ void ez_dro()
         if( clickCounterSW1 ){  // click main button in DRO enters ui menu mode
             uimenu_active = 1;
             ez_menu();
-            uimenu_active = 0;
-            update_dro = 1;
+            if( ! ez_run_pwrfd ){    // pwr feed wants to control screen
+                uimenu_active = 0;
+                update_dro = 1;
+            }
             //log_warn( "HJL: returned from ez_menu" );
         }
         clearBtnTouch();            
@@ -1064,6 +1104,8 @@ bool gcode_started = false;
 void eznc_dispatch( void )    // top level dispatcher
 {    
     // tricky to get it right
+    // is it really compatible with pwr fd cycles ?
+
     if( ez_check_cancel && sys.state == State::Cycle ) gcode_started = true;
     if( ez_check_cancel && gcode_started && sys.state == State::Idle  ){
         ez_check_cancel = false;
@@ -1073,7 +1115,7 @@ void eznc_dispatch( void )    // top level dispatcher
 
     if( ez_run_pwrfd ){
         ez_pwr_fd();
-        return;      // simplify, don't show DRO while running PwrFd
+        return;      // not necessary, but do it anyway
     }
 
     if( uimenu_active )

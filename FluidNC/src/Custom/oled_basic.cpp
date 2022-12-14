@@ -119,7 +119,7 @@ void oledDRO() {
     }
 
     // perhaps, don't show X/Y/Z during infile
-    
+
     oled->setTextAlignment(TEXT_ALIGN_RIGHT);
     if( sys.state != State::Idle ){  // infile is not a good indicator, compromise
         int progress = 100;
@@ -319,7 +319,7 @@ void display_init() {
                             NULL,              // parameters
                             1,                 // priority
                             &oledUpdateTaskHandle,
-                            //0  //runs fine
+                            //0  //runs fine ?
                             CONFIG_ARDUINO_RUNNING_CORE  // must run the task on same core
     );
 }
