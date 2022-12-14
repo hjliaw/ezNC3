@@ -55,7 +55,7 @@ float tool_dia = 6;
 long run_t0;
 
 float mark_A[3] = {0, 0, 0};
-float mark_B[3] = {10, 10, 0};    // non-zero for test
+float mark_B[3] = {0, 0, 0};
 
 // utilities
 unsigned int str_length(const char* strp)    // display width
@@ -802,12 +802,7 @@ void ez_set_pos()
 #undef Nm
 }
 
-#define Npf_wait 50  // 100  for 2-s, speedup for test 
 char pfmsg[4][Nstr];
-int  pflcnt = 1;
-int  pflcntold = 0;
-int  pfwait_cnt = 0;
-
 bool cmd_issued = false;
 bool cmd_started = false;
 bool cmd_finished = true;   // initial state
@@ -822,19 +817,20 @@ void ez_pwr_fd_reset()
 
     ez_run_pwrfd = false;
     uimenu_active = 0;
-    update_dro = 1;  // force screen update
+    update_dro = 1;
     clearBtnTouch();
 }
 
 void push_gcode( String gc )
 {
-    if(cmd_cnt < 500 ){
+    if(cmd_cnt < 500 )
         gcname[cmd_cnt++] = gc;
-    }
-    else{
-        log_warn( "too many g-code lines, some are chopped off");
-    }
+    else
+        log_warn( "too many g-code lines, some are dropped");
 }
+
+// quirk: run pwr fd after reset, screen will stay in run pwr fd
+// sometimes, stay in uimenu ?
 
 void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, until cancelled
 {
@@ -927,8 +923,10 @@ void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, unt
                 }
             }
         }
-        
+
         cmd_idx = 0;
+        sprintf( pfmsg[3], "touchR to cancel" );
+        u8g_print( pfmsg[0], pfmsg[1], pfmsg[2], pfmsg[3] );
 
         log_info( pfmsg[0] );
         log_info( "cmd list");
@@ -958,13 +956,10 @@ void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, unt
     }
 
     if( cmd_issued && ! cmd_started && sys.state == State::Cycle ){   // started
-        //log_warn( "ez pwr feed cmd started");
         cmd_started = true;
     }
 
-    if( cmd_started && sys.state == State::Idle ){   // finished, ready for more command
-        //log_warn( "ez pwr feed cmd finished");
-
+    if( cmd_started && sys.state == State::Idle ){   // ready for more command
         if( cmd_idx >= cmd_cnt ){
             ez_pwr_fd_reset();     // terminate
         }
@@ -974,8 +969,6 @@ void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, unt
             cmd_finished = true;
         }
     }
-
-
 }
 
 
@@ -985,8 +978,8 @@ void ez_mark_pos()        // X/Y only ? todo: briefly show info screen
 #define Nm 4
     char menu[Nm][Nstr] = {
         "Mark Position",
-        "as A",
         "as B",
+        "as A",
         "Cancel/Back"
     };
 
@@ -1000,10 +993,10 @@ void ez_mark_pos()        // X/Y only ? todo: briefly show info screen
 
     switch(sel){
         case 1:
-            for( int i=0; i<3; i++) mark_A[i] = pos[i];
+            for( int i=0; i<3; i++) mark_B[i] = pos[i];
             return;
         case 2:
-            for( int i=0; i<3; i++) mark_B[i] = pos[i];
+            for( int i=0; i<3; i++) mark_A[i] = pos[i];
             return;
         case 3:
             clearBtnTouch();
@@ -1040,25 +1033,25 @@ void ez_goto_pos()        // run_speed, perhaps add rapid position
             clearBtnTouch();
             return;
         case 2:
-            sprintf( eznc_line, "G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], run_speed );
+            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], run_speed );
             break;
         case 3:
-            sprintf( eznc_line, "G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], run_speed );
+            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], run_speed );
             break;
         case 4:  // X=0
-            sprintf( eznc_line, "G1X0F%.0f", run_speed );   // todo: speed ?
+            sprintf( eznc_line, "G90G1X0F%.0f", run_speed );   // todo: speed ?
             break;
         case 5:  // Y=0
-            sprintf( eznc_line, "G1Y0F%.0f", run_speed );
+            sprintf( eznc_line, "G90G1Y0F%.0f", run_speed );
             break;
         case 6:  // Z=0
-            sprintf( eznc_line, "G1Z0F%.0f", run_speed );
+            sprintf( eznc_line, "G90G1Z0F%.0f", run_speed );
             break;
         case 7:  // X=Y=0
-            sprintf( eznc_line, "G1X0Y0F%.0f", run_speed );
+            sprintf( eznc_line, "G90G1X0Y0F%.0f", run_speed );
             break;
         case 8:  // X=Y=Z=0
-            sprintf( eznc_line, "G1X0Y0F%.0f", run_speed );
+            sprintf( eznc_line, "G90G1X0Y0F%.0f", run_speed );
             break;
     }
     gc_execute_line(eznc_line, Uart0);
@@ -1100,11 +1093,15 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
         }
         return;
     case 2:
-        pflcnt = 1;
-        pflcntold = 0;
-        ez_run_pwrfd = true;   // can not block, set flag and return right away
+        if( (fabs(mark_B[0]) + fabs(mark_B[1])) < 1e-4 ){
+            float* pos = get_mpos();
+            mpos_to_wpos(pos);
+            mark_B[0] = pos[0];
+            mark_B[1] = pos[1];
+        }
+        ez_run_pwrfd = true;  // can not block, set flag and return right away
+        uimenu_active = 1;    // stops DRO
         clearBtnTouch();
-        uimenu_active = 1;  // stops DRO
         return;
     case 3: ez_mark_pos(); return;
     case 4: ez_goto_pos(); return;
@@ -1124,6 +1121,7 @@ void ez_dro()
     if( sys.state == State::Idle || sys.state == State::Jog ){
         enc_cnt = readEncoder(1);  // 1=no double reads
         if( enc_cnt != 0 ){
+            log_info( "DBG: enc_cnt= " << enc_cnt );
             ez_jog( enc_cnt );
         }
         else{

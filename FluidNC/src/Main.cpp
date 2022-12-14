@@ -40,8 +40,14 @@ ESP32Encoder encUI;
   #define SWR  GPIO_NUM_34     // Z
   #define ENCA GPIO_NUM_22     // probe-pin brd v2.1
   #define ENCB GPIO_NUM_33     // LCD_RS
+#elif BRD_EZMPG
+  #define SW1  GPIO_NUM_34 
+  #define SWL  GPIO_NUM_33     // undo old lib mix up
+  #define SWR  GPIO_NUM_32
+  #define ENCA GPIO_NUM_36
+  #define ENCB GPIO_NUM_39
 #else
-  #define SW1  GPIO_NUM_34 // encoder-Z (27) 
+  #define SW1  GPIO_NUM_34 
   #define SWL  GPIO_NUM_14 // was 32, move to encoder pin
   #define SWR  GPIO_NUM_13 // was 33
   #define ENCA GPIO_NUM_36

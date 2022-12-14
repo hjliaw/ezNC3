@@ -305,6 +305,11 @@ void display_init() {
 #else
     init_oled(0x3c, GPIO_NUM_21, GPIO_NUM_22, GEOMETRY_128_64);  // ezNC
 #endif
+
+#ifdef BRD_EZMPG
+    oled->flipScreenVertically();
+#endif
+
     oled->setTextAlignment(TEXT_ALIGN_LEFT);
     oled->clear();
     oled->setFont(ArialMT_Plain_16);
