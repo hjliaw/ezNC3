@@ -822,7 +822,7 @@ void ez_pwr_fd_reset()
     ez_run_pwrfd = false;
     uimenu_active = 0;
     update_dro = 1;
-    clearBtnTouch();
+    clearBtnTouch();  // to stay in pwr fd, need to preserve touch
 }
 
 void push_gcode( String gc )
@@ -835,6 +835,10 @@ void push_gcode( String gc )
 
 // quirk: run pwr fd after reset, screen will stay in run pwr fd
 // sometimes, stay in uimenu ?
+
+// return to origin ?
+// 2D: lift Z a little (custom Zlift, Zsafe ?)
+// 1D: lift or move away (too many options)
 
 void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, until cancelled
 {
@@ -882,8 +886,7 @@ void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, unt
                 push_gcode( String( eznc_line ) );
             }
         }
-        else{  // 2D sweep with 75% over_lap, snap to nearest point first
-            // todo: added C/D point as well
+        else{  // 2D sweep with 75% over_lap, move to nearest corner first
             float p0[2], p1[2];
             sprintf( pfmsg[0], "Power Feed X/Y" );
 
@@ -929,6 +932,7 @@ void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, unt
         }
 
         cmd_idx = 0;
+        pfmsg[1][0] = pfmsg[2][0] = 0;
         sprintf( pfmsg[3], "touchR to cancel" );
         u8g_print( pfmsg[0], pfmsg[1], pfmsg[2], pfmsg[3] );
 
@@ -965,7 +969,22 @@ void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, unt
 
     if( cmd_started && sys.state == State::Idle ){   // ready for more command
         if( cmd_idx >= cmd_cnt ){
-            ez_pwr_fd_reset();     // terminate
+            //ez_pwr_fd_reset();     // repeat
+            sprintf( pfmsg[0], "Power Feed Done" );
+            pfmsg[1][0] = 0;
+            sprintf( pfmsg[2], " click to repeat" );
+            sprintf( pfmsg[3], "touchR to cancel" );
+            u8g_print( pfmsg[0], pfmsg[1], pfmsg[2], pfmsg[3] );
+            clearBtnTouch();
+            while( !touchedR && ! btnClicked() ){
+                delay(100);
+            }
+            if( btnClicked() ){
+                cmd_finished = true;
+                cmd_issued   = false;
+                cmd_started  = false;
+                cmd_cnt = 0;
+            }
         }
         else{
             cmd_issued = false;
@@ -1124,7 +1143,7 @@ void ez_dro()
     if( sys.state == State::Idle || sys.state == State::Jog ){
         enc_cnt = readEncoder(1);  // 1=no double reads
         if( enc_cnt != 0 ){
-            log_info( "DBG: enc_cnt= " << enc_cnt );
+            //log_info( "DBG: enc_cnt= " << enc_cnt );
             ez_jog( enc_cnt );
         }
         else{
