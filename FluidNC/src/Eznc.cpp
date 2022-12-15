@@ -270,29 +270,33 @@ void ez_jog( int32_t rot ){
     if( rot == 0 ) return;
     jog_t0 = millis();
 
-    //Serial.print( "[uienc] " ); Serial.print( jog_t0  );                                                             
-    //Serial.print( "rot= " );  Serial.println( rot );                                                                 
-
     if( odir * rot < 0 ){  // reversal                                                                                 
         cancelJog = 1;      //ez_cancel_jog();                                                                         
         // some encoders have big jump on reversal ?                                                                   
         rot = (rot > 0) ? 1 : -1;   // can't just clear, hack it                                                       
     }
     else{
-        // TODO: user specified jogging speed and steps
-        // two ticks per step
-        if( gc_state.modal.units == Units::Mm ){
-            sprintf( eznc_line, "$J=G21G91%c%.3fF%.1f", 
-                    axis[jog_axis], 0.01*jog_stepsize*rot/2, jog_speed );
+        // two ticks per detent
+        float jstep;
+        int arot = (rot > 0) ? rot : -rot;
+
+        if( gc_state.modal.units == Units::Mm )
+            jstep = 0.01*jog_stepsize*rot/2;
+        else
+            jstep = 0.0254*jog_stepsize*rot/4;
+
+        // new algorithm
+        if( arot >  5 ) jstep *= 2;
+        if( arot >  9 ) jstep *= 2;
+        if( arot > 14 ){   // bigger but not too big step makes jogging smoother
+            if( rot > 0)
+                jstep = +jog_speed/50;
+            else
+                jstep = -jog_speed/50;
         }
-        else{
-            sprintf( eznc_line, "$J=G21G91%c%.3fF%.1f",
-                    axis[jog_axis], 0.0254*jog_stepsize*rot/4, jog_speed );
-        }
+        sprintf( eznc_line, "$J=G21G91%c%.4fF%.1f", axis[jog_axis], jstep, jog_speed );
         //report_status_message(gc_execute_line(eznc_line, Uart0), Uart0);
         gc_execute_line(eznc_line, Uart0);
-
-        //log_info( "ezJog " << eznc_line ); 
         ezJog = 1;                                                                     
     }
     odir = rot;
@@ -302,7 +306,7 @@ void ez_cancel_jog(){
     if (sys.state == State::Jog ) {
         protocol_send_event(&motionCancelEvent);                                                                   
     }
-    ezJog = 0;  // not necessary ?
+    ezJog = 0;  // not sure necessary
 }
 
 //-------------------------------------------------------------------------
@@ -722,16 +726,16 @@ void ez_set_pos()
 #define Nm 10
     int8_t sel=1, smin=1;
     char menu[Nm][Nstr] = {
-        "Set Position",
+        "Set As",
         "Back to DRO",  // missed comma will pass compilier
-        "X=Y=Z = 0",
-        "X=Y = 0",
-        "X = 0",
-        "Y = 0",
-        "Z = 0",
-        "X",
-        "Y",
-        "Z"
+        "X0 Y0 Z0",
+        "X0 Y0",
+        "X0",
+        "Y0",
+        "Z0",
+        "X =",
+        "Y =",
+        "Z ="
     };
     char msg[Nstr];
     float val, *pos;
@@ -914,7 +918,7 @@ void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, unt
             push_gcode( String( eznc_line ) );
 
             for( int i=0; i < Ny; i++ ){
-                if( fabs( p0[1]+i*ystep - p1[1] ) > tool_dia ){
+                if( fabs( p0[1]+i*ystep - p1[1] ) > tool_dia/2 ){
                     sprintf( eznc_line, "G91G1Y%.4fF%.0f", ystep, run_speed );
                     push_gcode( String( eznc_line ) );
 
@@ -1006,19 +1010,18 @@ void ez_mark_pos()        // X/Y only ? todo: briefly show info screen
 
 void ez_goto_pos()        // run_speed, perhaps add rapid position
 {
-    //log_info( "goto pos");
-    int8_t sel=1, smin=1;
 #define Nm 9
+    int8_t sel=1, smin=1;
     char menu[Nm][Nstr] = {    //todo: arbitrary position, or "mark" position?
         "Goto Position",
         "Back to DRO",  // missed comma will pass compilier
-        "Mark A (XY)",
-        "Mark B (XY)",
-        "X =0",
-        "Y =0",
-        "Z =0",
-        "X=Y =0",
-        "X=Y=Z = 0",
+        "A (XY only)",
+        "B (XY only)",
+        "X0",
+        "Y0",
+        "Z0",
+        "X0 Y0",
+        "X0 Y0 Z0",
     };
     char msg[Nstr];
     float val, *pos;

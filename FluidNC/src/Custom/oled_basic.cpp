@@ -141,7 +141,6 @@ void oledDRO() {
 
     char axisVal[20];
     float* print_position = get_mpos();
-
     mpos_to_wpos(print_position);  // same as ezNC
 
     // only has space for 3-axis ! what about lathe mode ?
@@ -214,7 +213,7 @@ void oledUI() {
 static void oledUpdate(void* pvParameters) {
     int32_t old_pos[MAX_N_AXIS];
 
-    vTaskDelay(600);  // wait for flash screen
+    vTaskDelay(1000);  // wait for flash screen, 600-ms wco is not updated
 
     uimenu_active=0;
     update_dro = 1;

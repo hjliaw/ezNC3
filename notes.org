@@ -6,14 +6,16 @@
         added encoder & buttons, still ok
 ** foo_bar state preserved
 * DONE need to debounce main switch
-* TODO: "mark" one or two positions, then "pwr feed"
+* DONE "mark" one or two positions, then "pwr feed"
         dy != 0, repeat N (zig-zag, used for surfaceing or pocket)
         dz  < 0, repeat N (deeper z on each travel), Q: one-way or two-way cuts ? 
-* TODO: drill and peck drill
-* TODO: enlarge hole
-* learn and repeat ?
-* TODO: show directory in file selection
-* TODO: optional confirm before move ?
-* todo: circlar cut ? inner or outer, if peripheral or clear-cut 
-* todo: inner-edge & outer-edge cuts (jig ?)
-* 
+* TODO drill and peck drill
+* TODO enlarge hole
+* ? learn and repeat ?
+* DONE show directory in file selection
+* TODO optional confirm before move ?
+* TODO circlar cut ? inner or outer, if peripheral or clear-cut 
+* TODO inner-edge & outer-edge cuts (jig ?)
+* TODO encoder to speed up or slow down 
+* TODO save user config to a file
+        tool_dia, jog_speed, run_speed, ui encoder direction, screen flip
