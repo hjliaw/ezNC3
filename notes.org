@@ -20,3 +20,4 @@
 * DONE save user config to a file or EEPROM
         tool_dia, jog_speed, run_speed, ui encoder direction, screen flip
 * Q: goto position with jog speed or run speed ?
+* BUG mark-A & mark-B changes as unit changes
