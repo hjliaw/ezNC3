@@ -1025,7 +1025,7 @@ void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, unt
     }
 }
 
-bool ez_enter_pos( char *title, float *x, float *y )  // only X/Y
+bool ez_enter_XY( char *title, float *x, float *y )
 {
     int dd = 100, ddinc=1;      // step size multiplier
     float step, np[2];
@@ -1126,23 +1126,126 @@ bool ez_enter_pos( char *title, float *x, float *y )  // only X/Y
     return true;
 }
 
-void ez_goto_pos()        // run_speed, perhaps add rapid position
+void ez_goto_AB()
+{
+    int8_t sel=1, smin=1;
+#define Nm 4
+    char menu[Nm][Nstr] = {
+        "Goto (XY)",
+        "Back to DRO",
+        "mark A",
+        "mark B"   };
+    clearBtnTouch();
+    select_from_menu( Nm, menu, &sel, &smin );  // blocking
+#undef Nm
+
+    if( touchedR ) return;
+    switch(sel){
+        case 1:
+            clearBtnTouch();
+            return;
+        case 2:
+            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], EZnc.run_speed );
+            break;
+        case 3:
+            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], EZnc.run_speed );
+            break;
+    }
+    gc_execute_line(eznc_line, Uart0);
+}
+
+void ez_goto_XYZ0()
+{
+    int8_t sel=1, smin=1;
+#define Nm 7
+    char menu[Nm][Nstr] = {   // if stay here, menu can be simplified
+        "Goto",
+        "Back to DRO",
+        "X0",
+        "Y0",
+        "X0 Y0",
+        "Z0",
+        "X0 Y0 Z0"
+    };
+    clearBtnTouch();
+    select_from_menu( Nm, menu, &sel, &smin );
+#undef Nm
+
+    if( touchedR ) return;
+    switch(sel){
+        case 1:
+            clearBtnTouch();
+            return;
+        case 2:  // X=0
+            sprintf( eznc_line, "G90G1X0F%.0f", EZnc.run_speed );
+            break;
+        case 3:  // Y=0
+            sprintf( eznc_line, "G90G1Y0F%.0f", EZnc.run_speed );
+            break;
+        case 4:  // X=Y=0
+            sprintf( eznc_line, "G90G1X0Y0F%.0f", EZnc.run_speed );
+            break;
+        case 5:  // Z=0
+            sprintf( eznc_line, "G90G1Z0F%.0f", EZnc.run_speed );
+            break;
+        case 6:  // X=Y=Z=0
+            sprintf( eznc_line, "G90G1X0Y0Z0F%.0f", EZnc.run_speed );
+            break;
+    }
+    gc_execute_line(eznc_line, Uart0);
+}
+
+void ez_goto_XY()
+{
+    float x, y, *p;
+
+#define Nm 4
+    int8_t sel=1, smin=1;
+    char menu[Nm][Nstr] = { 
+        "Goto XY",
+        "Back to DRO",  // missed comma will pass compilier
+        "Relative",
+        "Absolute"
+    };
+    clearBtnTouch();
+    select_from_menu( Nm, menu, &sel, &smin );
+#undef Nm
+
+    if( touchedR ) return;
+    switch(sel){
+        case 1:
+            clearBtnTouch();
+            return;
+        case 2:  // XY relative
+            x = y = 0.0;
+            if( ! ez_enter_XY( (char *)"Rel", &x, &y) )  return;
+            sprintf( eznc_line, "G91G1X%.4fY%.4fF%.0f", x, y, EZnc.run_speed );
+            break;
+        case 3:  // XY absolute
+            p = get_mpos();
+            mpos_to_wpos(p);
+            x = p[0];  y=p[1];
+            if( gc_state.modal.units == Units::Mm ){ p[0] /= 25.4; p[1] /= 25.4; }
+
+            if( ! ez_enter_XY( (char *)"Abs", &x, &y) ) return;
+            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", x, y, EZnc.run_speed );                
+            break;
+    }
+    gc_execute_line(eznc_line, Uart0);
+}
+
+void ez_goto_Z()
 {
     float x, y, *p;
 #define Nm 11
     int8_t sel=1, smin=1;
-    char menu[Nm][Nstr] = {    //todo: arbitrary position, or "mark" position?
+    char menu[Nm][Nstr] = { 
         "Goto Position",
-        "Back to DRO",  // missed comma will pass compilier
-        "point A (XY)",
-        "point B (XY)",
-        "X0",
-        "Y0",
-        "Z0",
-        "X0 Y0",
-        "X0 Y0 Z0",
-        "XY relative",
-        "XY absolute"    // Z relative ? not often, but useful
+        "Back to DRO",
+        "A/B (XY)",
+        "X0/Y0/Z0",
+        "XY",
+        "Z"
     };
     char msg[Nstr];
     float val, *pos;
@@ -1179,16 +1282,16 @@ void ez_goto_pos()        // run_speed, perhaps add rapid position
             break;
         case 9:  // XY relative
             x = y = 0.0;
-            if( ! ez_enter_pos( (char *)"Rel", &x, &y) )  return;
+            if( ! ez_enter_XY( (char *)"Rel", &x, &y) )  return;
             sprintf( eznc_line, "G91G1X%.4fY%.4fF%.0f", x, y, EZnc.run_speed );
             break;
         case 10:  // XY absolute   NOT WOKRING ! in inch mode
             p = get_mpos();
             mpos_to_wpos(p);  // wrapper ?
             x = p[0];  y=p[1];
-            if( gc_state.modal.units == Units::Mm ){ np[0] /= 25.4; np[1] /= 25.4; }
+            if( gc_state.modal.units == Units::Mm ){ p[0] /= 25.4; p[1] /= 25.4; }
 
-            if( ! ez_enter_pos( (char *)"Abs", &x, &y) ) return;
+            if( ! ez_enter_XY( (char *)"Abs", &x, &y) ) return;
             sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", x, y, EZnc.run_speed );                
             break;
     }
@@ -1196,6 +1299,43 @@ void ez_goto_pos()        // run_speed, perhaps add rapid position
     //log_info( eznc_line );
 
     gc_execute_line(eznc_line, Uart0);
+}
+
+void ez_goto_pos()        // run_speed, perhaps add rapid position
+{
+    int8_t sel=1, smin=1;
+
+#define Nm 6
+    char menu[Nm][Nstr] = {
+        "Goto Position",
+        "Back to DRO",  // missed comma will pass compilier
+        "mark A/B (XY)",
+        "X0/Y0/Z0",
+        "XY",
+        "Z"   };
+
+    clearBtnTouch();
+    select_from_menu( Nm, menu, &sel, &smin );  // blocking
+#undef Nm
+    if( touchedR ) return;
+
+    switch(sel){
+        case 1:
+            clearBtnTouch();
+            return;
+        case 2:
+            ez_goto_AB();
+            return;
+        case 3:
+            ez_goto_XYZ0();
+            return;
+        case 4:
+            ez_goto_XY();
+            return;
+        case 5:
+            ez_goto_Z();
+            return;
+    }
 }
 
 void ez_menu()   // top level ui menu, only title line is auto-scrolled
