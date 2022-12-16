@@ -555,7 +555,10 @@ float x_to_dx( float x )
 #define MSG__New  "New"
 
 // todo: use left align
+// TODO: allow step size to go higher
+
 // since left button is used to change step size, show step size on the left ? "> d=" 
+
 float set_float( float X, char *s, uint8_t dd, float max, float min, float dx )
 {
 	float newX = X;
@@ -573,27 +576,25 @@ float set_float( float X, char *s, uint8_t dd, float max, float min, float dx )
 	switch( dd ){
 	case 0:
 		sprintf( gbuf[3], "%s %10.0f" , MSG__Old, X );  // NOTE: formating depends on language !  FNC has more chars
-		sprintf( sdx, "d=%.0f",  dx  );
+		sprintf( gbuf[1], ">d=%11.0f",  dx  );
 		break;
 	case 1:
 		sprintf( gbuf[3], "%s %10.1f" , MSG__Old, X );
-		sprintf( sdx, "d=%.1f",  dx  );
+		sprintf( gbuf[1], ">d=%11.1f",  dx  );
 		break;
 	case 2:
  		sprintf( gbuf[3],  "%s %10.2f" , MSG__Old, X );
-		sprintf( sdx, "d=%.2f",  dx  );
+		sprintf( gbuf[1], ">d=%11.2f",  dx  );
 		break;
 	case 3:
 		sprintf( gbuf[3], "%s %10.3f" , MSG__Old, X );
-		sprintf( sdx, "d=%.3f",  dx  );
+		sprintf( gbuf[1], ">d=%11.3f",  dx  );
 		break;
 	case 4:
 		sprintf( gbuf[3], "%s %10.4f" , MSG__Old, X );
-		sprintf( sdx, "d=%.4f",  dx  );
+		sprintf( gbuf[1], ">d=%11.4f",  dx  );
 		break;
 	}
-		
-	sprintf( gbuf[1], ">%13s", sdx  );  // LANG WISH: arrow to indicate digit being changed
 		
 	int tchLcnt = 0;
 	float savedX = max * 2;
@@ -610,13 +611,12 @@ float set_float( float X, char *s, uint8_t dd, float max, float min, float dx )
 			else if( (dd != 0 && dd < 3 && dx > 0.01 ) ||
 					 (dd >= 3 && dx > 0.0001 ) || (dd == 0 && dx > 1) ) dx /= 10;
 
-			if( dd == 4 )      sprintf( sdx, "d=%.4f", dx );
-			else if( dd == 3 ) sprintf( sdx, "d=%.3f", dx );
-			else if( dd == 2 ) sprintf( sdx, "d=%.2f", dx );
-			else if( dd == 1 ) sprintf( sdx, "d=%.1f", dx );
-			else               sprintf( sdx, "d=%.0f", dx );
+			if( dd == 4 )      sprintf( gbuf[1], ">d=%11.4f", dx );
+			else if( dd == 3 ) sprintf( gbuf[1], ">d=%11.3f", dx );
+			else if( dd == 2 ) sprintf( gbuf[1], ">d=%11.2f", dx );
+			else if( dd == 1 ) sprintf( gbuf[1], ">d=%11.1f", dx );
+			else               sprintf( gbuf[1], ">d=%11.0f", dx );
 
-			sprintf( gbuf[1], "%14s", sdx  );
 			u8g_print( gbuf[0], gbuf[1], gbuf[2], gbuf[3] );
 			
 			if ( dd < 3 && dx > abs(newX)/10 ) dx_inc = 0;
@@ -742,99 +742,149 @@ void ez_config()
 #undef Nm
 }
 
-//---------------------------------------------------------------------------------------
-void ez_set_pos()
+void ez_set_AB()
 {
-
-#define Nm 12
     int8_t sel=1, smin=1;
+    float *pos;
+#define Nm 4
     char menu[Nm][Nstr] = {
-        "Set Current Position",
-        "Back to DRO",     // missed comma will compile fine
-        "as B",
-        "as A",
-        "as Xo/Yo/Zo",
-        "as Xo-Yo",
-        "as Xo",
-        "as Yo",
-        "as Zo",
-        "as X =",
-        "as Y =",
-        "as Z ="
-    };
-    char msg[Nstr];
-    float val, *pos;
+        "Set Pos As",
+        "Back to DRO",
+        "B",
+        "A"   };
+    clearBtnTouch();
+    select_from_menu( Nm, menu, &sel, &smin );  // blocking
+#undef Nm
 
     pos = get_mpos();
     mpos_to_wpos(pos);
-    // todo: add position value to menu string
 
-    clearBtnTouch();
-    select_from_menu( Nm, menu, &sel, &smin );  // blocking
     if( touchedR ) return;
-
     switch(sel){
         case 1:
-            clearBtnTouch();     // remove ?
             return;
-
-        case 2:  // point B
+        case 2:   // B first
             for( int i=0; i<3; i++) mark_B[i] = pos[i];
             break;
-        case 3:  // point A
+        case 3:
             for( int i=0; i<3; i++) mark_A[i] = pos[i];
             break;
+    }
+    return;
+}
 
-        case 4:  // X/Y/Z=0
-            if( confirm( (char *)"Set X=Y=Z=0") ){
-                    sprintf( eznc_line, "G10L20P1X0Y0Z0");
-                    gc_execute_line(eznc_line, Uart0);
-            }
+void ez_set_Zero()
+{
+    int8_t sel=1, smin=1;
+    float *pos;
+#define Nm 7 
+    char menu[Nm][Nstr] = {
+        "Set Pos As",
+        "Back to DRO",
+        "Xo,Yo,Zo",
+        "Xo,Yo",
+        "Xo",
+        "Yo",
+        "Zo"
+    };
+    clearBtnTouch();
+    select_from_menu( Nm, menu, &sel, &smin );  // blocking
+#undef Nm
+
+    pos = get_mpos();
+    mpos_to_wpos(pos);
+
+    if( touchedR ) return;
+    switch(sel){
+        case 1:
+            return;
+        case 2:  // X/Y/Z=0
+            if( ! confirm( (char *)"Set as X=Y=Z=0") ) return;
+            sprintf( eznc_line, "G10L20P1X0Y0Z0");
             break;
-        case 5:  // X/Y=0
-            if( confirm( (char *)"Set X=Y=0") ){
-                    sprintf( eznc_line, "G10L20P1X0Y0");
-                    gc_execute_line(eznc_line, Uart0);
-            }
+        case 3:  // X/Y=0
+            if( ! confirm( (char *)"Set as X=Y=0") ) return;
+            sprintf( eznc_line, "G10L20P1X0Y0");
             break;
-        case 6:  // X=0
-            if( confirm( (char *)"Set X=0") ){
-                    sprintf( eznc_line, "G10L20P1X0");
-                    gc_execute_line(eznc_line, Uart0);
-            }
+        case 4:  // X=0
+            if( ! confirm( (char *)"Set as X=0") ) return;
+            sprintf( eznc_line, "G10L20P1X0");
             break;
-        case 7:  // Y=0
-            if( confirm( (char *)"Set Y=0") ){
-                    sprintf( eznc_line, "G10L20P1Y0");
-                    gc_execute_line(eznc_line, Uart0);
-            }
+        case 5:  // Y=0
+            if( ! confirm( (char *)"Set as Y=0") ) return;
+            sprintf( eznc_line, "G10L20P1Y0");
             break;
-        case 8:  // Z=0
-            if( confirm( (char *)"Set Z=0") ){
-                    sprintf( eznc_line, "G10L20P1Z0");
-                    gc_execute_line(eznc_line, Uart0);
-            }
-            break;
-        case 9:  // X=?
-            val = pos[0];
-            val = set_float_auto_unit( val, (char *)"Set X= " );                
-            sprintf( eznc_line, "G10L20P1X%.4f", val );   // always set
-            gc_execute_line(eznc_line, Uart0);
-            break;
-        case 10:  // Y=?
-            val = pos[1];
-            val = set_float_auto_unit( val, (char *)"Set Y= " );                
-            sprintf( eznc_line, "G10L20P1Y%.4f", val );   // always set
-            gc_execute_line(eznc_line, Uart0);
-            break;
-        case 11:  // Z=?
-            val = pos[2];
-            val = set_float_auto_unit( val, (char *)"Set Z= " );                
-            sprintf( eznc_line, "G10L20P1Z%.4f", val );   // always set
-            gc_execute_line(eznc_line, Uart0);
+        case 6:  // Z=0
+            if( ! confirm( (char *)"Set Z=0") ) return;
+            sprintf( eznc_line, "G10L20P1Z0");
             break;
     }
+    gc_execute_line(eznc_line, Uart0);
+    return;
+}
+
+void ez_set_XYZ()
+{
+    int8_t sel=1, smin=1;
+    float *pos, val;
+    char msg[Nstr];
+    uint8_t a;
+    char aname[4] = "XYZ";
+
+#define Nm 5 
+    char menu[Nm][Nstr] = {
+        "Set Pos As",
+        "Back to DRO",
+        "X=",
+        "Y=",
+        "Z=",
+    };
+    clearBtnTouch();
+    select_from_menu( Nm, menu, &sel, &smin );  // blocking
 #undef Nm
+
+    pos = get_mpos();
+    mpos_to_wpos(pos);
+
+    if( touchedR || sel == 1 ) return;
+
+    a = sel-2;
+    if( a > 2 ) return;
+
+    val = pos[a];
+    sprintf( msg, "Set %c=", aname[a] );
+    val = set_float_auto_unit( val, msg );
+    if( fabs(val - pos[a]) < 1e-4 ) return;  // todo: user define tolerance
+
+    sprintf( eznc_line, "G10L20P1%c%.4f", aname[a], val );
+    gc_execute_line(eznc_line, Uart0);
+    return;
+}
+
+//---------------------------------------------------------------------------------------
+void ez_set_pos()
+{
+    int8_t sel=1, smin=1;
+
+#define Nm 5
+    char menu[Nm][Nstr] = {
+        "Set As",
+        "A or B",
+        "Xo/Yo/Zo",
+        "XYZ",
+        "Back to DRO",
+        };
+    clearBtnTouch();
+    select_from_menu( Nm, menu, &sel, &smin );  // blocking
+#undef Nm
+
+    if( touchedR ) return;
+    switch(sel){
+        case 1:  ez_set_AB();   return;
+        case 2:  ez_set_Zero(); return;
+        case 3:  ez_set_XYZ();  return;
+        case 4:  return;
+    }
 }
 
 char pfmsg[4][Nstr];
@@ -1039,12 +1089,10 @@ bool ez_enter_XY( char *title, float *x, float *y )
     np[1] = *y;
 
     if( gc_state.modal.units == Units::Mm )
-        step = 0.01; // derive from EZnc.NDDM ?
-    else{
+        step = 0.01;  // derive from EZnc.NDDM ?
+    else
         step = 0.001;
-        np[0] /= 25.4;
-        np[1] /= 25.4;
-    }
+
     clearBtnTouch();
     update = 1;  // draw 1st screen
     while( !btnClicked() ){    // touchR is step size now !
@@ -1120,12 +1168,105 @@ bool ez_enter_XY( char *title, float *x, float *y )
     return true;
 }
 
+bool ez_enter_Z( char *title, float *z )
+{
+    int dd = 100, ddinc=1;      // step size multiplier
+    float step, nz;
+    char mstr[Nstr];
+    int sel = 1;
+    int update;
+    uint8_t oled_y_pos;
+
+    update_menu = 0;  // stop oled task, take over
+    nz = *z;
+
+    if( gc_state.modal.units == Units::Mm )       // save as EZnc.step and compute once
+        step = 0.01;  // derive from EZnc.NDDM ?
+    else
+        step = 0.001;
+
+    clearBtnTouch();
+    update = 1;  // draw 1st screen
+    while( !btnClicked() ){    // touchR is step size now !
+
+        if( touchedL ){
+            sel = 1 + sel % 2;  // limit to 1 or 2
+            touchedL = 0;
+            update = 1;
+        }
+
+        if( touchedR ){
+            if( ddinc ) dd *= 10;
+            else        dd /= 10;
+            if( dd > 1000 ){
+                ddinc = 0;  dd = 100;
+            }
+            if( dd < 1){
+                ddinc = 1;  dd = 10;
+            }
+            touchedR = 0;
+            update = 1;
+        }
+
+        enc_cnt = readEncoder(1);  // 1=no double reads
+        if( enc_cnt != 0 && sel < 2){
+            nz += enc_cnt * step * dd / 2;
+            update = 1;
+        }
+
+        if( gc_state.modal.units == Units::Mm )
+            sprintf( mstr, "%.2f mm", step * dd );
+        else
+            sprintf( mstr, "%.3f in", step * dd );
+
+        if( update ){
+            oled->clear();
+            oled->setFont(DejaVu_Sans_Mono_14);
+
+            oled->setTextAlignment(TEXT_ALIGN_LEFT);   // may need smaller font
+            oled->drawString(2, 2, title );
+            oled->setTextAlignment(TEXT_ALIGN_RIGHT);
+            oled->drawString(126, 2, mstr );
+
+            // z-only, sel=1 or 2
+            uint8_t a = 1;
+            oled_y_pos = 19 + a*15;
+
+            String a_name = ((a==sel)? ">Z":" Z");
+            oled->setTextAlignment(TEXT_ALIGN_LEFT);
+            oled->drawString(0, oled_y_pos, a_name);
+
+            oled->setTextAlignment(TEXT_ALIGN_RIGHT);
+            if( gc_state.modal.units == Units::Mm )
+                snprintf( mstr, 19, "%.2f mm", nz);
+            else
+                snprintf( mstr, 19, "%.3f in", nz);
+            oled->drawString( 126, oled_y_pos, mstr);
+
+            // draw last line 
+            oled_y_pos = 19 + 2*15;
+            if( sel != 2 ) snprintf( mstr, 19, " click to go" );
+            else           snprintf( mstr, 19, ">click to cancel" );
+            oled->setTextAlignment(TEXT_ALIGN_LEFT);
+            oled->drawString( 0, oled_y_pos, mstr);
+            oled->display();
+            update = 0;
+        }
+    }
+
+    // btn clicked
+    update_menu = 1;  // resume oled task
+    if( sel == 2 ) return false;
+    *z = nz;
+    return true;
+}
+
 void ez_goto_AB()
 {
     int8_t sel=1, smin=1;
 #define Nm 4
     char menu[Nm][Nstr] = {
-        "Goto A|B on XY",
+        "Goto A/B on XY",
         "Back to DRO",
         "A",
         "B"   };
@@ -1198,8 +1339,8 @@ void ez_goto_XY()
     char menu[Nm][Nstr] = { 
         "Goto XY",
         "Back to DRO",  // missed comma will pass compilier
-        "Relative",
-        "Absolute"
+        "Rel",
+        "Abs"
     };
     clearBtnTouch();
     select_from_menu( Nm, menu, &sel, &smin );
@@ -1234,7 +1375,7 @@ void ez_goto_Z()
 #define Nm 4
     int8_t sel=1, smin=1;
     char menu[Nm][Nstr] = { 
-        "Goto",
+        "Goto Z",
         "Back to DRO",
         "Z Rel",
         "Z Abs",
@@ -1244,24 +1385,21 @@ void ez_goto_Z()
 #undef Nm
 
     if( touchedR ) return;
-
     switch(sel){
         case 1:
             clearBtnTouch();
             return;
         case 2:  // Z rel
-            z = 0;
-            z = set_float_auto_unit( z, (char *)"G91 G1 Rel Z" );
-            if( fabs(z) < 0.01 ) return;
+            z = 0.0;               // Goto is too long
+            if( ! ez_enter_Z( (char *)"G1 Rel", &z) )  return;
             sprintf( eznc_line, "G91G1Z%.4fF%.0f", z, EZnc.run_speed );
             break;
         case 3:
             p = get_mpos();
             mpos_to_wpos(p);
             z = p[2];
-            z = set_float_auto_unit( z, (char *)"G90 G1 Abs Z" );
-            if( fabs(z-p[2]) < 0.01 ) return;            
-            sprintf( eznc_line, "G90Z%.4fF%.0f", z, EZnc.run_speed );
+            if( ! ez_enter_Z( (char *)"G1 Abs", &z) )  return;
+            sprintf( eznc_line, "G90G1Z%.4fF%.0f", z, EZnc.run_speed );
             break;
     }
     gc_execute_line(eznc_line, Uart0);
@@ -1274,8 +1412,8 @@ void ez_goto_pos()        // run_speed, perhaps add rapid position
 #define Nm 6
     char menu[Nm][Nstr] = {
         "Goto Position",
-        "A/B  (XY)",
-        "Xo/Yo/Zo",   // Xo or X0 ? | or /
+        "A or B",
+        "Xo/Yo/Zo",
         "XY",
         "Z",
         "Back to DRO",   // sub-menu has return to DRO as 1st choice
