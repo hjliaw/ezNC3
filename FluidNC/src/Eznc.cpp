@@ -1040,9 +1040,11 @@ bool ez_enter_pos( char *title, float *x, float *y )  // only X/Y
 
     if( gc_state.modal.units == Units::Mm )
         step = 0.01; // derive from EZnc.NDDM ?
-    else
+    else{
         step = 0.001;
-
+        np[0] /= 25.4;
+        np[1] /= 25.4;
+    }
     clearBtnTouch();
     update = 1;  // draw 1st screen
     while( !btnClicked() ){    // touchR is step size now !
@@ -1097,13 +1099,13 @@ bool ez_enter_pos( char *title, float *x, float *y )  // only X/Y
                 if( gc_state.modal.units == Units::Mm )
                     snprintf( mstr, 19, "%.2f mm", np[a]);
                 else
-                    snprintf( mstr, 19, "%.3f in", np[a]/25.4);
+                    snprintf( mstr, 19, "%.3f in", np[a]);
                 oled->drawString( 126, oled_y_pos, mstr);
             }
             // draw last line 
             oled_y_pos = 19 + 2*15;
-            if( sel != 2 ) snprintf( mstr, 19, " click to go" );
-            else           snprintf( mstr, 19, ">click to cancel" );
+            if( sel != 2 ) snprintf( mstr, 19, " click to Go" );
+            else           snprintf( mstr, 19, ">click to Cancel" );
             oled->setTextAlignment(TEXT_ALIGN_LEFT);
             oled->drawString( 0, oled_y_pos, mstr);
             oled->display();
@@ -1112,13 +1114,15 @@ bool ez_enter_pos( char *title, float *x, float *y )  // only X/Y
     }
 
     // btn clicked, decide to set new value or not
-
     update_menu = 1;  // resume oled task
     if( sel == 2 ) return false;
 
-    log_info( " pos entered= " << np[0] << ", " << np[1]);
-    *x = np[0];
-    *y = np[1];  //for( int i=0; i<2; i++) pos_entered[i] = np[i];
+    //if( gc_state.modal.units == Units::Mm ){
+        *x = np[0];  *y = np[1];
+    //}
+    //else{
+    //    *x = np[0]*25.4;  *y = np[1]*25.4;
+    //}
     return true;
 }
 
@@ -1175,23 +1179,21 @@ void ez_goto_pos()        // run_speed, perhaps add rapid position
             break;
         case 9:  // XY relative
             x = y = 0.0;
-            if( ez_enter_pos( (char *)"Goto Rel", &x, &y) )
-                sprintf( eznc_line, "G91G1X%.4fY%.4fF%.0f", x, y, EZnc.run_speed );
-            else
-                return;  // bypass gc_exec below
+            if( ! ez_enter_pos( (char *)"Rel", &x, &y) )  return;
+            sprintf( eznc_line, "G91G1X%.4fY%.4fF%.0f", x, y, EZnc.run_speed );
             break;
-        case 10:  // XY absolute
+        case 10:  // XY absolute   NOT WOKRING ! in inch mode
             p = get_mpos();
-            mpos_to_wpos(p);  // same as ezNC
+            mpos_to_wpos(p);  // wrapper ?
             x = p[0];  y=p[1];
-            if( ez_enter_pos( (char *)"Goto Abs", &x, &y) )
-                sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", x, y, EZnc.run_speed );
-            else
-                return;
+            if( gc_state.modal.units == Units::Mm ){ np[0] /= 25.4; np[1] /= 25.4; }
+
+            if( ! ez_enter_pos( (char *)"Abs", &x, &y) ) return;
+            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", x, y, EZnc.run_speed );                
             break;
     }
-    log_info( " pos entered= " << x << ", " << y );
-    log_info( eznc_line );
+    //log_info( " pos entered= " << x << ", " << y );
+    //log_info( eznc_line );
 
     gc_execute_line(eznc_line, Uart0);
 }
