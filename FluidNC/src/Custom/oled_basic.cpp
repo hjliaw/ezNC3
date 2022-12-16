@@ -132,7 +132,7 @@ void oledDRO() {
             sprintf( msg, "%.2f mm", jog_stepsize/100.0 );
         else
             sprintf( msg, "%.3f in", jog_stepsize/1000.0 );
-            
+
         oled->drawString(126, 2, msg );
     }
 
@@ -304,15 +304,14 @@ static void oledUpdateOLD(void* pvParameters) {
 void display_init() {
 #ifdef BRD_DLC32
     init_oled(0x3c, GPIO_NUM_0, GPIO_NUM_4, GEOMETRY_128_64);  // DLC32
-    oled->flipScreenVertically();   // no flip for ezNC
 #else
     init_oled(0x3c, GPIO_NUM_21, GPIO_NUM_22, GEOMETRY_128_64);  // ezNC
 #endif
 
-#ifdef BRD_EZMPG
-    oled->flipScreenVertically();
-#endif
+    if( EZnc.FlipScreen)
+        oled->flipScreenVertically();
 
+    // todo: load bitmap image
     oled->setTextAlignment(TEXT_ALIGN_LEFT);
     oled->clear();
     oled->setFont(ArialMT_Plain_16);

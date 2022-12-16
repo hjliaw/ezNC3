@@ -16,6 +16,7 @@
 * TODO optional confirm before move ?
 * TODO circlar cut ? inner or outer, if peripheral or clear-cut 
 * TODO inner-edge & outer-edge cuts (jig ?)
-* TODO encoder to speed up or slow down 
-* TODO save user config to a file
+* TODO encoder to speed up or slow down a cut
+* DONE save user config to a file or EEPROM
         tool_dia, jog_speed, run_speed, ui encoder direction, screen flip
+* Q: goto position with jog speed or run speed ?
