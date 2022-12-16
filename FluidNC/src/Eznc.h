@@ -1,3 +1,5 @@
+
+
 #ifndef NO_ENCODER
 #include <ESP32Encoder.h>
 #endif
@@ -16,6 +18,14 @@
 #ifndef NO_ENCODER
 extern ESP32Encoder encUI;
 #endif
+
+typedef struct {
+        uint8_t        Unit, FlipScreen, UiEncDir, SpEncDir;
+        float          jog_speed, run_speed, tool_dia;
+        uint8_t        NDDI, NDDM;   // number of digits in inch and metric mode, 3 & 2
+} eznc_t;
+
+extern eznc_t EZnc;
 
 extern volatile int clickCounterSW1, touchedL, touchedR;
 extern int cancelJog;
@@ -46,3 +56,6 @@ bool yes_or_no( char *msg1, char *msg2, int yes = 1 );
 
 float set_float( float X, char *s, uint8_t dd, float max=+1e5, float min = -1e5, float dx = 0.0 );
 float set_float_auto_unit( float Xx, char *s, float max=+1e5, float min= -1e5, float dx=0.0 );
+
+void load_eznc_eeprom( void );
+void save_eznc_eeprom( void );

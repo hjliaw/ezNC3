@@ -128,7 +128,11 @@ void oledDRO() {
         //log_warn( "progress " << progress << "% " << String(millis()-run_t0) );
     }
     else{
-        sprintf( msg, "jog%d", jog_stepsize );
+        if( gc_state.modal.units == Units::Mm )
+            sprintf( msg, "%.2f mm", jog_stepsize/100.0 );
+        else
+            sprintf( msg, "%.3f in", jog_stepsize/1000.0 );
+            
         oled->drawString(126, 2, msg );
     }
 

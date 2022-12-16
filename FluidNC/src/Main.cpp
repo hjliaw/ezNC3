@@ -29,10 +29,14 @@ extern void make_user_commands();
 
 // 20221201 HJL: ezNC code
 
+#include <EEPROM.h>
 #ifndef NO_ENCODER
 #include <ESP32Encoder.h>
 ESP32Encoder encUI; 
 #endif
+
+#include "Eznc.h"
+eznc_t EZnc;
 
 #ifdef BRD_DLC32
   #define SW1  GPIO_NUM_36     // X
@@ -131,7 +135,6 @@ void clearTouch( void ){
         touchedR = 0;
 }
 
-
 int32_t readEncoder(int a)  // ui encoder, a>0, single read with possible accel
 {
     static int64_t oldcnt;
@@ -148,10 +151,40 @@ int32_t readEncoder(int a)  // ui encoder, a>0, single read with possible accel
 
     if( dcnt ) oldcnt = r;
 
-    return dcnt;
+    return (EZnc.UiEncDir) ? dcnt : -dcnt;
+}
+
+#define EEP_SIZE 1024
+
+void save_eznc_eeprom(){
+    EEPROM.put( 0, EZnc );
+    EEPROM.commit();
+}
+
+void load_eznc_eeprom()
+{
+    EEPROM.get( 0, EZnc );
+
+    if( EZnc.Unit > 1 || EZnc.FlipScreen > 1 || EZnc.UiEncDir  > 1 
+        || EZnc.tool_dia > 100.0 || EZnc.tool_dia < 0.1 ){
+
+        EZnc.Unit = 1;   // 1=G21=metric
+        EZnc.FlipScreen = 0;
+        EZnc.UiEncDir = 1;
+
+        EZnc.jog_speed = 150.0;
+        EZnc.run_speed = 80.0;
+        EZnc.tool_dia  = 6.0;
+
+        EZnc.NDDI  = 3;
+        EZnc.NDDM  = 2;
+    }
 }
 
 void setup() {
+
+    EEPROM.begin( EEP_SIZE);   // 1k, eznc starts at 0
+    load_eznc_eeprom();
 
     ESP32Encoder::useInternalWeakPullResistors= UP;
     pinMode( ENCA, INPUT_PULLDOWN);

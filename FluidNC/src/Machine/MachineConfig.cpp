@@ -139,7 +139,7 @@ namespace Machine {
         // builtin config.  This helps prevent reset loops on bad config files.
         esp_reset_reason_t reason = esp_reset_reason();
 
-        // HJL: enable machine config for debug  TODO: remove
+        // HJL: enable machine config for debug  TODO: remove after tested
         //if (reason == ESP_RST_PANIC) {
         //    log_error("Skipping configuration file due to panic");
         //    configOkay = false;

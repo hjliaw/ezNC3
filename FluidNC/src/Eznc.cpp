@@ -46,11 +46,7 @@ int32_t enc_cnt = 0;
 
 // todo: save parameters permamently (in localfs)
 
-int   jog_stepsize = 1;
-float jog_speed = 200;  // mm/min
-float run_speed = 150;
-
-float tool_dia = 6;
+int   jog_stepsize = 1000;
 
 long run_t0;
 
@@ -264,6 +260,8 @@ void listLFS( const char* path ){  // list local file system, save file names in
 // eznc jogging
 //---------------------------------------------------------------------------------
 
+// try 10x step size
+
 void ez_jog( int32_t rot ){
     char axis[3] = {'X', 'Y', 'Z'};
     static int32_t odir;
@@ -276,25 +274,27 @@ void ez_jog( int32_t rot ){
         rot = (rot > 0) ? 1 : -1;   // can't just clear, hack it                                                       
     }
     else{
-        // two ticks per detent
         float jstep;
         int arot = (rot > 0) ? rot : -rot;
 
         if( gc_state.modal.units == Units::Mm )
-            jstep = 0.01*jog_stepsize*rot/2;
-        else
-            jstep = 0.0254*jog_stepsize*rot/4;
+            jstep = 0.01*jog_stepsize*rot/2.0;     // two ticks per detent
 
+        else
+            jstep = 0.0254*jog_stepsize*rot/2.0;
+
+#if 0
         // new algorithm
         if( arot >  5 ) jstep *= 2;
         if( arot >  9 ) jstep *= 2;
         if( arot > 14 ){   // bigger but not too big step makes jogging smoother
             if( rot > 0)
-                jstep = +jog_speed/50;
+                jstep = +EZnc.jog_speed/50;
             else
-                jstep = -jog_speed/50;
+                jstep = -EZnc.jog_speed/50;
         }
-        sprintf( eznc_line, "$J=G21G91%c%.4fF%.1f", axis[jog_axis], jstep, jog_speed );
+#endif
+        sprintf( eznc_line, "$J=G21G91%c%.4fF%.1f", axis[jog_axis], jstep, EZnc.jog_speed );
         //report_status_message(gc_execute_line(eznc_line, Uart0), Uart0);
         gc_execute_line(eznc_line, Uart0);
         ezJog = 1;                                                                     
@@ -677,21 +677,25 @@ float set_float_auto_unit( float Xx, char *s, float max, float min, float dx ){
 
 void ez_config()
 {
+#define Nm 9
     int8_t sel=1, smin=1;
-    char menu[6][Nstr] = {
+    char menu[9][Nstr] = {
         "Configuration",
         "Go Back",
         "Change Unit",
         "Run Speed",
         "Jog Speed",
         "Tool Diameter",
+        "Flip Screen",
+        "Flip UI encoder",
+        "Save Config",
     };
     char msg[Nstr];
     float val, *pos;
 
   for(;;){
     clearBtnTouch();
-    select_from_menu( 6, menu, &sel, &smin );  // blocking
+    select_from_menu( Nm, menu, &sel, &smin );  // blocking
     if( touchedR ) return;
 
     switch(sel){
@@ -706,16 +710,35 @@ void ez_config()
             gc_execute_line( eznc_line, Uart0);
             return;
         case 3:  // run speed
-            run_speed = set_float( run_speed, (char *)"Run Speed (mm/min)", 0, 1500, 10, 10 );
+            EZnc.run_speed = set_float( EZnc.run_speed, (char *)"Run Speed (mm/min)", 0, 1500, 10, 10 );
             break;
         case 4:  // jog speed
-            jog_speed = set_float( jog_speed, (char *)"Jog Speed (mm/min)", 0, 1500, 10, 10 );
+            EZnc.jog_speed = set_float( EZnc.jog_speed, (char *)"Jog Speed (mm/min)", 0, 1500, 10, 10 );
             break;
         case 5: // tool diameter
-            tool_dia = set_float( tool_dia, (char *)"Tool Dia. (mm)", 3, 100, 0.1, 1 );
+            EZnc.tool_dia = set_float( EZnc.tool_dia, (char *)"Tool Dia. (mm)", 3, 100, 0.1, 1 );
+            break;
+        case 6: // flip screen
+            if( confirm( (char *)"Flip Screen ?") ){
+                EZnc.FlipScreen = ! EZnc.FlipScreen;
+                if( EZnc.FlipScreen )
+                    oled->flipScreenVertically();
+                else
+                    oled->resetOrientation();
+            }
+            break;
+        case 7: // flip ui encoder direction
+            if( confirm( (char*) "Flip MPG Encoder ?") ){
+                EZnc.UiEncDir = ! EZnc.UiEncDir;
+            }
+            break;
+        case 8: // save config
+            if( confirm( (char*) "Save Config ?") )
+                save_eznc_eeprom();
             break;
     }
   }
+#undef Nm
 }
 
 //---------------------------------------------------------------------------------------
@@ -874,15 +897,15 @@ void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, unt
                 sprintf( pfmsg[0], "Power Feed Y" );
                         
             if( dB < dA ){
-                sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], run_speed );
+                sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], EZnc.run_speed );
                 push_gcode( String( eznc_line ) );
-                sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], run_speed );
+                sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], EZnc.run_speed );
                 push_gcode( String( eznc_line ) );
             }
             else{
-                sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], run_speed );
+                sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], EZnc.run_speed );
                 push_gcode( String( eznc_line ) );
-                sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], run_speed );
+                sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], EZnc.run_speed );
                 push_gcode( String( eznc_line ) );
             }
         }
@@ -902,13 +925,13 @@ void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, unt
             sprintf( eznc_line, "X/Y  p0=[%.2f, %.2f]  p1=[%.2f, %.2f", p0[0], p0[1], p1[0], p1[1]);
             log_warn( eznc_line );
 
-            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", p0[0], p0[1], run_speed );
+            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", p0[0], p0[1], EZnc.run_speed );
             push_gcode( String( eznc_line ) );
 
             // always sweep x-first
             dx = p1[0] - p0[0];
             dy = p1[1] - p0[1];
-            float ystep = tool_dia * 0.75;
+            float ystep = EZnc.tool_dia * 0.75;
             if( dy < 0 ) ystep = -ystep;
             int Ny = abs(lroundf(dy/ystep));
 
@@ -917,15 +940,15 @@ void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, unt
             log_info( "  ystep=" << ystep );
             log_info( "     Ny=" << Ny );
 
-            sprintf( eznc_line, "G91G1X%.4fF%.0f", dx, run_speed );  // first x-cut
+            sprintf( eznc_line, "G91G1X%.4fF%.0f", dx, EZnc.run_speed );  // first x-cut
             push_gcode( String( eznc_line ) );
 
             for( int i=0; i < Ny; i++ ){
-                if( fabs( p0[1]+i*ystep - p1[1] ) > tool_dia/2 ){
-                    sprintf( eznc_line, "G91G1Y%.4fF%.0f", ystep, run_speed );
+                if( fabs( p0[1]+i*ystep - p1[1] ) > EZnc.tool_dia/2 ){
+                    sprintf( eznc_line, "G91G1Y%.4fF%.0f", ystep, EZnc.run_speed );
                     push_gcode( String( eznc_line ) );
 
-                    sprintf( eznc_line, "G91G1X%.4fF%.0f", (i%2==0) ? -dx:+dx, run_speed );
+                    sprintf( eznc_line, "G91G1X%.4fF%.0f", (i%2==0) ? -dx:+dx, EZnc.run_speed );
                     push_gcode( String( eznc_line ) );
                 }
             }
@@ -1055,25 +1078,25 @@ void ez_goto_pos()        // run_speed, perhaps add rapid position
             clearBtnTouch();
             return;
         case 2:
-            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], run_speed );
+            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], EZnc.run_speed );
             break;
         case 3:
-            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], run_speed );
+            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], EZnc.run_speed );
             break;
         case 4:  // X=0
-            sprintf( eznc_line, "G90G1X0F%.0f", run_speed );   // todo: speed ?
+            sprintf( eznc_line, "G90G1X0F%.0f", EZnc.run_speed );   // todo: speed ?
             break;
         case 5:  // Y=0
-            sprintf( eznc_line, "G90G1Y0F%.0f", run_speed );
+            sprintf( eznc_line, "G90G1Y0F%.0f", EZnc.run_speed );
             break;
         case 6:  // Z=0
-            sprintf( eznc_line, "G90G1Z0F%.0f", run_speed );
+            sprintf( eznc_line, "G90G1Z0F%.0f", EZnc.run_speed );
             break;
         case 7:  // X=Y=0
-            sprintf( eznc_line, "G90G1X0Y0F%.0f", run_speed );
+            sprintf( eznc_line, "G90G1X0Y0F%.0f", EZnc.run_speed );
             break;
         case 8:  // X=Y=Z=0
-            sprintf( eznc_line, "G90G1X0Y0F%.0f", run_speed );
+            sprintf( eznc_line, "G90G1X0Y0F%.0f", EZnc.run_speed );
             break;
     }
     gc_execute_line(eznc_line, Uart0);
@@ -1140,12 +1163,14 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
 
 void ez_dro()
 {
+    static bool ss_inc = false;
     if( sys.state == State::Idle || sys.state == State::Jog ){
         enc_cnt = readEncoder(1);  // 1=no double reads
         if( enc_cnt != 0 ){
             //log_info( "DBG: enc_cnt= " << enc_cnt );
             ez_jog( enc_cnt );
         }
+#if 0
         else{
             unsigned long jog_dt = millis() - jog_t0;
             if( jog_dt > 150 && ezJog ){   // avoid multiple calls
@@ -1154,6 +1179,7 @@ void ez_dro()
             }
         }
         if( cancelJog ) ez_cancel_jog();
+#endif
     }
 
     if( btnClicked() || touched() ){ // todo: individual button clear
@@ -1165,9 +1191,29 @@ void ez_dro()
         }
             
         if( touchedR ){
+#if 0
             if( sys.state == State::Idle || sys.state == State::Jog ){
                 jog_stepsize = jog_stepsize << 1;
                 if( jog_stepsize > 4 ) jog_stepsize = 1;
+#else
+            if( sys.state == State::Jog ){
+                ez_cancel_jog();
+            }
+            else if( sys.state == State::Idle ){
+                if( ss_inc )    // 1, 10, 100, 1000
+                    jog_stepsize = jog_stepsize * 10;
+                else
+                    jog_stepsize = jog_stepsize / 10;
+
+                if( jog_stepsize > 5000 ){
+                    ss_inc = false;
+                    jog_stepsize = 100;
+                }
+                if( jog_stepsize < 1 ){
+                    ss_inc = true;
+                    jog_stepsize = 10;
+                }
+#endif
                 update_dro = 1;
                 //log_info( "SWR jog step " << jog_stepsize );
             }
