@@ -757,7 +757,7 @@ void ez_set_AB()
 #undef Nm
 
     pos = get_mpos();
-    mpos_to_wpos(pos);
+    mpos_to_wpos(pos);   // B/A are saved in mm
 
     if( touchedR ) return;
     switch(sel){
@@ -869,7 +869,7 @@ void ez_set_pos()
 #define Nm 5
     char menu[Nm][Nstr] = {
         "Set As",
-        "A or B",
+        "B or A",
         "Xo/Yo/Zo",
         "XYZ",
         "Back to DRO",
@@ -1268,23 +1268,29 @@ void ez_goto_AB()
     char menu[Nm][Nstr] = {
         "Goto A/B on XY",
         "Back to DRO",
-        "A",
-        "B"   };
+        "B",
+        "A"   };
     clearBtnTouch();
     select_from_menu( Nm, menu, &sel, &smin );  // blocking
 #undef Nm
 
     if( touchedR ) return;
     switch(sel){
-        case 1:
+    case 1:
             clearBtnTouch();
-            return;
-        case 2:
-            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], EZnc.run_speed );
-            break;
-        case 3:
+        return;
+    case 2:   // B first, B/A are saved in mm
+        if( gc_state.modal.units == Units::Mm )
             sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0], mark_B[1], EZnc.run_speed );
-            break;
+        else
+            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_B[0]*MM2INCH, mark_B[1]*MM2INCH, EZnc.run_speed );
+        break;
+    case 3:
+        if( gc_state.modal.units == Units::Mm )
+            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0], mark_A[1], EZnc.run_speed );
+        else
+            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", mark_A[0]*MM2INCH, mark_A[1]*MM2INCH, EZnc.run_speed );
+        break;
     }
     gc_execute_line(eznc_line, Uart0);
 }
@@ -1296,11 +1302,11 @@ void ez_goto_XYZ0()
     char menu[Nm][Nstr] = {   // if stay here, menu can be simplified
         "Goto",
         "Back to DRO",
-        "X0",
-        "Y0",
-        "X0 Y0",
-        "Z0",
-        "X0 Y0 Z0"
+        "Xo",
+        "Yo",
+        "Xo,Yo",
+        "Zo",
+        "Xo,Yo,Zo"
     };
     clearBtnTouch();
     select_from_menu( Nm, menu, &sel, &smin );
@@ -1339,8 +1345,8 @@ void ez_goto_XY()
     char menu[Nm][Nstr] = { 
         "Goto XY",
         "Back to DRO",  // missed comma will pass compilier
-        "Rel",
-        "Abs"
+        "XY Rel",
+        "XY Abs"
     };
     clearBtnTouch();
     select_from_menu( Nm, menu, &sel, &smin );
@@ -1412,7 +1418,7 @@ void ez_goto_pos()        // run_speed, perhaps add rapid position
 #define Nm 6
     char menu[Nm][Nstr] = {
         "Goto Position",
-        "A or B",
+        "B or A",
         "Xo/Yo/Zo",
         "XY",
         "Z",
