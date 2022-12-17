@@ -129,9 +129,9 @@ void oledDRO() {
     }
     else{
         if( gc_state.modal.units == Units::Mm )
-            sprintf( msg, "%.2f mm", jog_stepsize/100.0 );
+            sprintf( msg, "%.2f %s", jog_stepsize/100.0, jss_inc ? "<<" : ">>" );
         else
-            sprintf( msg, "%.3f in", jog_stepsize/1000.0 );
+            sprintf( msg, "%.3f %s", jog_stepsize/1000.0, jss_inc ? "<<" : ">>" );
 
         oled->drawString(126, 2, msg );
     }
@@ -312,12 +312,17 @@ void display_init() {
         oled->flipScreenVertically();
 
     // todo: load bitmap image
-    oled->setTextAlignment(TEXT_ALIGN_LEFT);
     oled->clear();
     oled->setFont(ArialMT_Plain_16);
-    oled->drawString(0, 0, "Starting");
+
+    oled->setTextAlignment(TEXT_ALIGN_RIGHT);
+    oled->drawString(127, 63-15, "with FluidNC");
+
+    oled->setTextAlignment(TEXT_ALIGN_LEFT);
+    //oled->drawString(0, 0, "Starting");
     oled->setFont(ArialMT_Plain_24);
-    oled->drawString(0, 20, "ezFluidNC");
+    oled->drawString(10, 10, "ezNC-3");
+
     oled->display();
 
     xTaskCreatePinnedToCore(oledUpdate,        // task

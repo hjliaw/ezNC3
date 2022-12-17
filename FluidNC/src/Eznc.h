@@ -1,5 +1,4 @@
 
-
 #ifndef NO_ENCODER
 #include <ESP32Encoder.h>
 #endif
@@ -31,6 +30,7 @@ extern volatile int clickCounterSW1, touchedL, touchedR;
 extern int cancelJog;
 extern volatile bool ez_check_cancel;
 
+extern bool jss_inc;
 extern String ez_gcfn;
 extern float mark_A[3];
 extern float mark_B[3];

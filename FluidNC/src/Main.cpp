@@ -66,18 +66,19 @@ volatile int  sw1_status;
 volatile int  swL_status;
 volatile int  swR_status;
 
-volatile unsigned long lastBTtime = 0;
+volatile unsigned long lastBTtimeSW1 = 0;
+volatile unsigned long lastBTtimeSWL = 0;
+volatile unsigned long lastBTtimeSWR = 0;
 
 void IRAM_ATTR handleInterruptSW1() {
     unsigned long t, dt;
     t = millis();
-    dt = t - lastBTtime;
-    if( dt < 250 ) return;   // need a bad button to test
+    dt = t - lastBTtimeSW1;
+    if( dt < 450 ) return;   // need a bad button to test
 
-    sw1_status = digitalRead(SW1);   // triggered on rising, should be high
-        
+    sw1_status = digitalRead(SW1);  // trig on falling
     if( sw1_status == LOW ){
-        lastBTtime = t;
+        lastBTtimeSW1 = t;
         clickCounterSW1++;
     }
 }
@@ -85,12 +86,12 @@ void IRAM_ATTR handleInterruptSW1() {
 void IRAM_ATTR handleInterruptSWL() { 
     unsigned long t, dt;
     t = millis();
-    dt = t - lastBTtime;
+    dt = t - lastBTtimeSWL;
     if( dt < 250 ) return;
 
     swL_status = digitalRead(SWL);
     if( swL_status == LOW ){
-        lastBTtime = t;
+        lastBTtimeSWL = t;
         touchedL++;
     }
 }
@@ -98,15 +99,16 @@ void IRAM_ATTR handleInterruptSWL() {
 void IRAM_ATTR handleInterruptSWR() {
     unsigned long t, dt;
     t = millis();
-    dt = t - lastBTtime;
+    dt = t - lastBTtimeSWR;
     if( dt < 250 ) return;
     
     swR_status = digitalRead(SWR);
     if( swR_status == LOW ){
-        lastBTtime = t;
+        lastBTtimeSWR = t;
         touchedR++;
     }
 }
+
 int volatile btnClickedRlsd( void ){   // clicked and released, for UI navigation
         delay(150);
         return( (clickCounterSW1 > 0) && digitalRead(SW1) );

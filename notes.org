@@ -5,19 +5,22 @@
         had to add encoder library
         added encoder & buttons, still ok
 ** foo_bar state preserved
-* DONE need to debounce main switch
+* DONE need to debounce main switch  MAY need more
 * DONE "mark" one or two positions, then "pwr feed"
         dy != 0, repeat N (zig-zag, used for surfaceing or pocket)
         dz  < 0, repeat N (deeper z on each travel), Q: one-way or two-way cuts ? 
 * TODO drill and peck drill
 * TODO enlarge hole
-* ? learn and repeat ?
-* DONE show directory in file selection
-* TODO optional confirm before move ?
+* Q: learn and repeat ?
 * TODO circlar cut ? inner or outer, if peripheral or clear-cut 
 * TODO inner-edge & outer-edge cuts (jig ?)
 * TODO encoder to speed up or slow down a cut
 * DONE save user config to a file or EEPROM
         tool_dia, jog_speed, run_speed, ui encoder direction, screen flip
-* Q: goto position with jog speed or run speed ?
-* BUG mark-A & mark-B changes as unit changes
+* Q: goto position with jog speed or run speed ? run, safer
+
+* NOTE: two cases where touchR is not cancel
+** set single float number 
+** goto or set position XY, Z
+
+* ui menu is not very responsive
