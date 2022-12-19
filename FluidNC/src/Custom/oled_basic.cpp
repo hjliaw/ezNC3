@@ -110,9 +110,10 @@ void oledDRO() {
 
     oled->setTextAlignment(TEXT_ALIGN_LEFT);
     if( infile ){
-        String p = infile->path();
+        String p = infile->path();    // scroll long file name ?
         p.replace("/littlefs/", "");
-        oled->drawString(0, 0, p);
+        p.replace("/sd/", "");
+        oled->drawString(0, 0, p.substring(0, Wchars - 4) );
     }
     else{
         oled->drawString(0, 0, state_name());
@@ -122,14 +123,18 @@ void oledDRO() {
 
     oled->setTextAlignment(TEXT_ALIGN_RIGHT);
     if( sys.state != State::Idle ){  // infile is not a good indicator, compromise
-        int progress = 100;
-        if( infile ) progress = infile->percent_complete();
-        oled->drawString(126, 2, String(progress) + "%" );
+        if( infile ){
+            int progress = infile->percent_complete();
+            oled->drawString(126, 2, String(progress) + "%" );
+        }
+        else{
+            oled->drawString(126, 2, "..." );
+        }
         //log_warn( "progress " << progress << "% " << String(millis()-run_t0) );
     }
     else{
         if( gc_state.modal.units == Units::Mm )
-            sprintf( msg, "%.2f %s", jog_stepsize/100.0, jss_inc ? "<<" : ">>" );
+            sprintf( msg, "%.2f %s", jog_stepsize/100.0,  jss_inc ? "<<" : ">>" );
         else
             sprintf( msg, "%.3f %s", jog_stepsize/1000.0, jss_inc ? "<<" : ">>" );
 
@@ -302,10 +307,12 @@ static void oledUpdateOLD(void* pvParameters) {
 #endif
 
 void display_init() {
-#ifdef BRD_DLC32
-    init_oled(0x3c, GPIO_NUM_0, GPIO_NUM_4, GEOMETRY_128_64);  // DLC32
+#if defined(BRD_DLC32)
+    init_oled(0x3c, GPIO_NUM_0, GPIO_NUM_4, GEOMETRY_128_64);
+#elif defined(BRD_TINYBEE)
+    init_oled(0x3c, GPIO_NUM_16, GPIO_NUM_17, GEOMETRY_128_64);
 #else
-    init_oled(0x3c, GPIO_NUM_21, GPIO_NUM_22, GEOMETRY_128_64);  // ezNC
+    init_oled(0x3c, GPIO_NUM_21, GPIO_NUM_22, GEOMETRY_128_64);  // ezNC/MPG
 #endif
 
     if( EZnc.FlipScreen)
@@ -319,7 +326,6 @@ void display_init() {
     oled->drawString(127, 63-15, "with FluidNC");
 
     oled->setTextAlignment(TEXT_ALIGN_LEFT);
-    //oled->drawString(0, 0, "Starting");
     oled->setFont(ArialMT_Plain_24);
     oled->drawString(10, 10, "ezNC-3");
 

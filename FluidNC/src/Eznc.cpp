@@ -735,12 +735,12 @@ bool ez_enter_XY( char *title, float *x, float *y )
             oled->setFont(DejaVu_Sans_Mono_14);
 
             oled->setTextAlignment(TEXT_ALIGN_LEFT);   // may need smaller font
-            oled->drawString(2, 2, title );
+            oled->drawString(0, 0, title );
             oled->setTextAlignment(TEXT_ALIGN_RIGHT);
-            oled->drawString(126, 2, mstr );
+            oled->drawString(127, 0, mstr );
 
             for (uint8_t a = 0; a < 2; a++) {   // fixed for eznc
-                oled_y_pos = 19 + a*15;
+                oled_y_pos = 18 + a*15;
 
                 String a_name = ((a==sel)? ">":" ") + String(Machine::Axes::_names[a]) + "= ";
                 oled->setTextAlignment(TEXT_ALIGN_LEFT);
@@ -748,13 +748,13 @@ bool ez_enter_XY( char *title, float *x, float *y )
 
                 oled->setTextAlignment(TEXT_ALIGN_RIGHT);
                 if( gc_state.modal.units == Units::Mm )
-                    snprintf( mstr, 19, "%.2f mm", np[a]);
+                    snprintf( mstr, 18, "%.2f mm", np[a]);
                 else
-                    snprintf( mstr, 19, "%.3f in", np[a]);
-                oled->drawString( 126, oled_y_pos, mstr);
+                    snprintf( mstr, 18, "%.3f in", np[a]);
+                oled->drawString( 127, oled_y_pos, mstr);
             }
             // draw last line 
-            oled_y_pos = 19 + 2*15;
+            oled_y_pos = 18 + 2*15;
             if( sel != 2 ) snprintf( mstr, 19, " click to go/set" );
             else           snprintf( mstr, 19, ">click to cancel" );
             oled->setTextAlignment(TEXT_ALIGN_LEFT);
@@ -818,22 +818,22 @@ bool ez_enter_Z( char *title, float *z )
         }
 
         if( gc_state.modal.units == Units::Mm )
-            sprintf( mstr, "d=%.2f %s", step*dd, ddinc ? "<<" : ">>" );
+            sprintf( mstr, "%.2f %s", step*dd, ddinc ? "<<" : ">>" );
         else
-            sprintf( mstr, "d=%.3f %s", step*dd, ddinc ? "<<" : ">>" );
+            sprintf( mstr, "%.3f %s", step*dd, ddinc ? "<<" : ">>" );
 
         if( update ){
             oled->clear();
             oled->setFont(DejaVu_Sans_Mono_14);
 
             oled->setTextAlignment(TEXT_ALIGN_LEFT);   // may need smaller font
-            oled->drawString(2, 2, title );
+            oled->drawString(0, 0, title );
             oled->setTextAlignment(TEXT_ALIGN_RIGHT);
-            oled->drawString(126, 2, mstr );
+            oled->drawString(127, 0, mstr );
 
             // z-only, sel=1 or 2
             uint8_t a = 1;
-            oled_y_pos = 19 + a*15;
+            oled_y_pos = 18 + a*15;
 
             String a_name = ((a==sel)? ">Z=":" Z=");
             oled->setTextAlignment(TEXT_ALIGN_LEFT);
@@ -841,13 +841,13 @@ bool ez_enter_Z( char *title, float *z )
 
             oled->setTextAlignment(TEXT_ALIGN_RIGHT);
             if( gc_state.modal.units == Units::Mm )
-                snprintf( mstr, 19, "%.2f mm", nz);
+                snprintf( mstr, 18, "%.2f mm", nz);
             else
-                snprintf( mstr, 19, "%.3f in", nz);
-            oled->drawString( 126, oled_y_pos, mstr);
+                snprintf( mstr, 18, "%.3f in", nz);
+            oled->drawString( 127, oled_y_pos, mstr);
 
             // draw last line 
-            oled_y_pos = 19 + 2*15;
+            oled_y_pos = 18 + 2*15;
             if( sel != 2 ) snprintf( mstr, 19, " click to go/set" );
             else           snprintf( mstr, 19, ">click to cancel" );
             oled->setTextAlignment(TEXT_ALIGN_LEFT);
@@ -1003,7 +1003,7 @@ void ez_set_Zero()
             sprintf( eznc_line, "G10L20P1Y0");
             break;
         case 6:  // Z=0
-            if( ! confirm( (char *)"Set Z=0") ) return;
+            if( ! confirm( (char *)"Set as Z=0") ) return;
             sprintf( eznc_line, "G10L20P1Z0");
             break;
     }
@@ -1042,7 +1042,7 @@ void ez_set_pos()
             x = pos[0];  y=pos[1];
             if( gc_state.modal.units == Units::Inches ){ x = pos[0]*MM2INCH; y = pos[1]*MM2INCH; }
 
-            if( ! ez_enter_XY( (char *)"Set", &x, &y) )  return;
+            if( ! ez_enter_XY( (char *)"Set As", &x, &y) )  return;
             sprintf( eznc_line, "G10L20P1X%.4fY%.4f", x, y );
             gc_execute_line(eznc_line, Uart0);
             return;
@@ -1050,7 +1050,7 @@ void ez_set_pos()
             z = pos[2];
             if( gc_state.modal.units == Units::Inches ){ z = pos[0]*MM2INCH; }
 
-            if( ! ez_enter_Z( (char *)"Set", &z) )  return;
+            if( ! ez_enter_Z( (char *)"Set As", &z) )  return;
             sprintf( eznc_line, "G10L20P1Z%.4f", z );
             gc_execute_line(eznc_line, Uart0);
             return;
@@ -1093,7 +1093,7 @@ void push_gcode( String gc )
 // 2D: lift Z a little (custom Zlift, Zsafe ?)
 // 1D: lift or move away (too many options)
 
-void ez_pwr_fd()        // XY only, move between A/B, wait 2-s at end point, until cancelled
+void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
 {
     static int cmd_idx;
 
@@ -1331,8 +1331,8 @@ void ez_goto_XY()
     char menu[Nm][Nstr] = { 
         "Goto XY",
         "Back to DRO",  // missed comma will pass compilier
-        "XY Rel",
-        "XY Abs"
+        "Relative",
+        "Absolute"
     };
     clearBtnTouch();
     select_from_menu( Nm, menu, &sel, &smin );
@@ -1369,8 +1369,8 @@ void ez_goto_Z()
     char menu[Nm][Nstr] = { 
         "Goto Z",
         "Back to DRO",
-        "Z Rel",
-        "Z Abs",
+        "Relative",
+        "Absolute",
     };
     clearBtnTouch();
     select_from_menu( Nm, menu, &sel, &smin );  // blocking

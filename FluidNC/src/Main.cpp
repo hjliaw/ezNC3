@@ -50,8 +50,14 @@ eznc_t EZnc;
   #define SWR  GPIO_NUM_32
   #define ENCA GPIO_NUM_36
   #define ENCB GPIO_NUM_39
+#elif BRD_TINYBEE
+  #define SW1  GPIO_NUM_39    // TB
+  #define SWL  GPIO_NUM_36    // TH1
+  #define SWR  GPIO_NUM_34    // TH2, need to shift jumper
+  #define ENCA GPIO_NUM_14
+  #define ENCB GPIO_NUM_12
 #else
-  #define SW1  GPIO_NUM_34 
+  #define SW1  GPIO_NUM_34  // eznc test jig 
   #define SWL  GPIO_NUM_14 // was 32, move to encoder pin
   #define SWR  GPIO_NUM_13 // was 33
   #define ENCA GPIO_NUM_36

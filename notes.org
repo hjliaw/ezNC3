@@ -24,3 +24,6 @@
 ** goto or set position XY, Z
 
 * ui menu is not very responsive
+* need a way to clear errors upon boot up
+  door or limit switch error may be tripped
+

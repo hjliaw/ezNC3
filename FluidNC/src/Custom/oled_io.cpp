@@ -20,18 +20,27 @@
 #    include "oled_io.h"
 #    include "../Uart.h"
 
-//SSD1306Wire* oled;
+#if defined(BRD_EZMPG) || defined (BRD_DLC32) || defined (BRD_TINYBEE)
 SH1106Wire* oled;    // 1.3"
-//U8G2_SSD1306_128X64_NONAME_F_HW_I2C *oled;  // 1.3" u8g2
+#else
+SSD1306Wire* oled;
+#endif
+
+//U8G2_SSD1306_128X64_NONAME_F_HW_I2C *oled;  // 1.3" u8g2 TBD
 
 void init_oled(uint8_t address, pinnum_t sda_gpio, pinnum_t scl_gpio, OLEDDISPLAY_GEOMETRY geometry) {
     Uart0 << "[MSG:INFO Init OLED SDA:gpio." << sda_gpio << " SCL:gpio." << scl_gpio << "]\n";
 
-    //oled = new SSD1306Wire(address, sda_gpio, scl_gpio, geometry, I2C_ONE, 400000);
+// TODO: should let user define DISPLAY instead of by board
 
+#if defined(BRD_EZMPG)  || defined (BRD_DLC32) || defined (BRD_TINYBEE)
     oled = new SH1106Wire(address, sda_gpio, scl_gpio, geometry, I2C_ONE, 400000);
+#else
+    oled = new SSD1306Wire(address, sda_gpio, scl_gpio, geometry, I2C_ONE, 400000);
+#endif
 
-    //NOT YET oled = new U8G2_SH1106_128X64_NONAME_F_HW_I2C( U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
+    //NOT WORKING YET
+    // oled = new U8G2_SH1106_128X64_NONAME_F_HW_I2C( U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
 
     oled->init();
 }
