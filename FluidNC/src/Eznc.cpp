@@ -731,35 +731,35 @@ bool ez_enter_XY( char *title, float *x, float *y )
             sprintf( mstr, "%.3f %s", step*dd, ddinc ? "<<" : ">>"  );
 
         if( update ){
-            oled->clear();
-            oled->setFont(DejaVu_Sans_Mono_14);
+            oled_clear();
+            oled_setFont();
 
-            oled->setTextAlignment(TEXT_ALIGN_LEFT);   // may need smaller font
-            oled->drawString(0, 0, title );
-            oled->setTextAlignment(TEXT_ALIGN_RIGHT);
-            oled->drawString(127, 0, mstr );
+            //oled_setTextAlignment(TEXT_ALIGN_LEFT);   // may need smaller font
+            oled_drawString(0, 0, title );
+            //oled_setTextAlignment(TEXT_ALIGN_RIGHT);
+            oled_drawString(127-9*8, 0, mstr );
 
             for (uint8_t a = 0; a < 2; a++) {   // fixed for eznc
                 oled_y_pos = 18 + a*15;
 
                 String a_name = ((a==sel)? ">":" ") + String(Machine::Axes::_names[a]) + "= ";
-                oled->setTextAlignment(TEXT_ALIGN_LEFT);
-                oled->drawString(0, oled_y_pos, a_name);
+                //oled_setTextAlignment(TEXT_ALIGN_LEFT);
+                oled_drawString(0, oled_y_pos, a_name);
 
-                oled->setTextAlignment(TEXT_ALIGN_RIGHT);
+                //oled_setTextAlignment(TEXT_ALIGN_RIGHT);
                 if( gc_state.modal.units == Units::Mm )
                     snprintf( mstr, 18, "%.2f mm", np[a]);
                 else
                     snprintf( mstr, 18, "%.3f in", np[a]);
-                oled->drawString( 127, oled_y_pos, mstr);
+                oled_drawString( 127-9*8, oled_y_pos, mstr);
             }
             // draw last line 
             oled_y_pos = 18 + 2*15;
             if( sel != 2 ) snprintf( mstr, 19, " click to go/set" );
             else           snprintf( mstr, 19, ">click to cancel" );
-            oled->setTextAlignment(TEXT_ALIGN_LEFT);
-            oled->drawString( 0, oled_y_pos, mstr);
-            oled->display();
+            //oled_setTextAlignment(TEXT_ALIGN_LEFT);
+            oled_drawString( 0, oled_y_pos, mstr);
+            oled_display();
             update = 0;
         }
     }
@@ -823,36 +823,36 @@ bool ez_enter_Z( char *title, float *z )
             sprintf( mstr, "%.3f %s", step*dd, ddinc ? "<<" : ">>" );
 
         if( update ){
-            oled->clear();
-            oled->setFont(DejaVu_Sans_Mono_14);
+            oled_clear();
+            oled_setFont();
 
-            oled->setTextAlignment(TEXT_ALIGN_LEFT);   // may need smaller font
-            oled->drawString(0, 0, title );
-            oled->setTextAlignment(TEXT_ALIGN_RIGHT);
-            oled->drawString(127, 0, mstr );
+            //oled_setTextAlignment(TEXT_ALIGN_LEFT);   // may need smaller font
+            oled_drawString(0, 0, title );
+            //oled_setTextAlignment(TEXT_ALIGN_RIGHT);
+            oled_drawString(127-9*8, 0, mstr );
 
             // z-only, sel=1 or 2
             uint8_t a = 1;
             oled_y_pos = 18 + a*15;
 
             String a_name = ((a==sel)? ">Z=":" Z=");
-            oled->setTextAlignment(TEXT_ALIGN_LEFT);
-            oled->drawString(0, oled_y_pos, a_name);
+            //oled_setTextAlignment(TEXT_ALIGN_LEFT);
+            oled_drawString(0, oled_y_pos, a_name);
 
-            oled->setTextAlignment(TEXT_ALIGN_RIGHT);
+            //oled_setTextAlignment(TEXT_ALIGN_RIGHT);
             if( gc_state.modal.units == Units::Mm )
                 snprintf( mstr, 18, "%.2f mm", nz);
             else
                 snprintf( mstr, 18, "%.3f in", nz);
-            oled->drawString( 127, oled_y_pos, mstr);
+            oled_drawString( 127-9*8, oled_y_pos, mstr);
 
             // draw last line 
             oled_y_pos = 18 + 2*15;
             if( sel != 2 ) snprintf( mstr, 19, " click to go/set" );
             else           snprintf( mstr, 19, ">click to cancel" );
-            oled->setTextAlignment(TEXT_ALIGN_LEFT);
-            oled->drawString( 0, oled_y_pos, mstr);
-            oled->display();
+            //oled_setTextAlignment(TEXT_ALIGN_LEFT);
+            oled_drawString( 0, oled_y_pos, mstr);
+            oled_display();
             update = 0;
         }
     }
@@ -910,10 +910,7 @@ void ez_config()
         case 6: // flip screen
             if( confirm( (char *)"Flip Screen ?") ){
                 EZnc.FlipScreen = ! EZnc.FlipScreen;
-                if( EZnc.FlipScreen )
-                    oled->flipScreenVertically();
-                else
-                    oled->resetOrientation();
+                oled_setFlipMode();
             }
             break;
         case 7: // flip ui encoder direction

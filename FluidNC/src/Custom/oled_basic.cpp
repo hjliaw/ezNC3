@@ -44,60 +44,44 @@ int    ui_sel, ui_frame;
 
 static TaskHandle_t oledUpdateTaskHandle = 0;
 
-// This displays the status of the ESP32 Radios...BT, WiFi, etc
-static void oledRadioInfo() {
-    String radio_addr   = "";
-    String radio_name   = "";
-    String radio_status = "";
-    char js[16];
+// wrapper for oled & u8g2
 
-#    ifdef ENABLE_BLUETOOTH
-    if (WebUI::bt_enable->get()) {
-        radio_name = String("BT: ") + WebUI::bt_name->get();
-    }
-#    endif
-#    ifdef ENABLE_WIFI
-    if (radio_name == "") {
-        if ((WiFi.getMode() == WIFI_MODE_STA) || (WiFi.getMode() == WIFI_MODE_APSTA)) {
-            radio_name = "STA: " + WiFi.SSID();
-            radio_addr = WiFi.localIP().toString();
-        } else if ((WiFi.getMode() == WIFI_MODE_AP) || (WiFi.getMode() == WIFI_MODE_APSTA)) {
-            radio_name = String("AP:") + WebUI::wifi_ap_ssid->get();
-            radio_addr = WiFi.softAPIP().toString();
-        } else {
-            radio_name = "Radio Mode: None";
-        }
-    }
-#    endif
-
-    if (radio_name == "") {
-        radio_name = "Radio Mode:Disabled";
-    }
-
-    oled->setTextAlignment(TEXT_ALIGN_LEFT);
-    oled->setFont(ArialMT_Plain_10);
-
-    if (sys.state == State::Alarm) {  // print below Alarm:
-        oled->drawString(0, 18, radio_name);
-        oled->drawString(0, 30, radio_addr);
-
-    } else {  // print next to status
-#    ifdef ENABLE_BLUETOOTH
-        oled->drawString(55, 2, radio_name);
-#    else
-        oled->drawString(50, 2, radio_addr);
-#    endif
-        sprintf( js, "s%d", jog_stepsize );
-        oled->drawString(115, 2, js );
-    }
+void oled_clear(){
+    u8g2->clearBuffer();
 }
 
-static void draw_checkbox(int16_t x, int16_t y, int16_t width, int16_t height, bool checked) {
-    if (checked) {
-        oled->fillRect(x, y, width, height);  // If log.0
-    } else {
-        oled->drawRect(x, y, width, height);  // If log.1
-    }
+void oled_setFont(){
+    u8g2->setFont(u8g_font_courR10);
+//  oled->setFont(ArialMT_Plain_16);
+}
+void oled_setTextAlignment();
+
+void oled_setFlipMode(){
+    u8g2->setFlipMode( EZnc.FlipScreen);
+//    if( EZnc.FlipScreen ) oled->flipScreenVertically();
+//    else                  oled->resetOrientation();
+}
+
+void oled_drawString( uint8_t x, uint8_t y, String s){
+    u8g2->drawStr( x, y, s.c_str() );
+}
+
+//void oled_drawUTF8( x, y, ui_txt[i]);
+void oled_display(){
+    u8g2->sendBuffer();
+}
+
+void oled_drawRFrame(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t r){
+    u8g2->drawRFrame( x1, y1, x2, y2, r);
+
+//        oled->drawHorizontalLine( 2, 0, 128-4);
+//        oled->drawHorizontalLine( 2,17, 128-4);
+//        oled->drawVerticalLine(   0, 2,  18-4);
+//        oled->drawVerticalLine( 127, 2,  18-4);
+//        oled->drawLine( 2,  0,  0,  2);
+//        oled->drawLine( 0, 15,  2, 17);
+//        oled->drawLine( 125,  0,  127,  2);
+//        oled->drawLine( 125, 17,  127, 15);
 }
 
 // remove static, need to be called from uI
@@ -105,30 +89,29 @@ void oledDRO() {
     uint8_t oled_y_pos;
     char msg[16];
 
-    oled->clear();
-    oled->setFont(DejaVu_Sans_Mono_14);
-
-    oled->setTextAlignment(TEXT_ALIGN_LEFT);
+    oled_clear();
+    //oled_setFont(DejaVu_Sans_Mono_14);
+    //oled_setTextAlignment(TEXT_ALIGN_LEFT);
     if( infile ){
         String p = infile->path();    // scroll long file name ?
         p.replace("/littlefs/", "");
         p.replace("/sd/", "");
-        oled->drawString(0, 0, p.substring(0, Wchars - 4) );
+        oled_drawString(0, 0, p.substring(0, Wchars - 4) );
     }
     else{
-        oled->drawString(0, 0, state_name());
+        oled_drawString(0, 0, state_name());
     }
 
     // perhaps, don't show X/Y/Z during infile
 
-    oled->setTextAlignment(TEXT_ALIGN_RIGHT);
+    //oled_setTextAlignment(TEXT_ALIGN_RIGHT);
     if( sys.state != State::Idle ){  // infile is not a good indicator, compromise
         if( infile ){
             int progress = infile->percent_complete();
-            oled->drawString(126, 2, String(progress) + "%" );
+            oled_drawString(126-3*9, 2, String(progress) + "%" );
         }
         else{
-            oled->drawString(126, 2, "..." );
+            oled_drawString(126-3*9, 2, "..." );
         }
         //log_warn( "progress " << progress << "% " << String(millis()-run_t0) );
     }
@@ -138,7 +121,7 @@ void oledDRO() {
         else
             sprintf( msg, "%.3f %s", jog_stepsize/1000.0, jss_inc ? "<<" : ">>" );
 
-        oled->drawString(126, 2, msg );
+        oled_drawString(126-8*9, 2, msg );  // need to calculate string length
     }
 
     // todo: invert X/Y/Y when limit switch tripped
@@ -157,20 +140,20 @@ void oledDRO() {
         oled_y_pos = 19 + (axis * 15);
         // todo: use alignment
         String axis_letter = ((axis==jog_axis)? ">":" ") + String(Machine::Axes::_names[axis]) + "  ";
-        oled->setTextAlignment(TEXT_ALIGN_LEFT);
-        oled->drawString(0, oled_y_pos, axis_letter);
+        //oled_setTextAlignment(TEXT_ALIGN_LEFT);
+        oled_drawString(0, oled_y_pos, axis_letter);
 
-        oled->setTextAlignment(TEXT_ALIGN_RIGHT);
+        //oled->setTextAlignment(TEXT_ALIGN_RIGHT);
         if( gc_state.modal.units == Units::Mm ){
             snprintf(axisVal, 20 - 1, "%.2f mm", print_position[axis]);
-            oled->drawString( 126, oled_y_pos, axisVal);
+            oled_drawString( 126-8*9, oled_y_pos, axisVal);
         }
         else{
             snprintf(axisVal, 20 - 1, "%.3f in", print_position[axis]/25.4);
-            oled->drawString( 126, oled_y_pos, axisVal);
+            oled_drawString( 126-9*9, oled_y_pos, axisVal);
         }
     }
-    oled->display();
+    oled_display();
 }
 
 // a lot of global parameters, todo: make an eznc object ?
@@ -180,28 +163,17 @@ void oledUI() {
 	uint8_t offs;
 	offs = (ui_sel < 0 ) ? 2 : 12;
 
-    oled->clear();
-    oled->setFont(DejaVu_Sans_Mono_14);
-	//oled->setFont(DejaVu_Serif_13);   // ok, but space is much narrower than >
-
-    oled->setTextAlignment(TEXT_ALIGN_LEFT);  // duh, reason for no show
+    oled_clear();
+    //oled_setFont(DejaVu_Sans_Mono_14);
+    //oled_setTextAlignment(TEXT_ALIGN_LEFT);  // duh, reason for no show
 
     if( ui_frame > 0){
-        //oled->drawRect( 0, 0, 127, 18);
-        oled->drawHorizontalLine( 2, 0, 128-4);
-        oled->drawHorizontalLine( 2,17, 128-4);
-        oled->drawVerticalLine(   0, 2,  18-4);
-        oled->drawVerticalLine( 127, 2,  18-4);
-
-        oled->drawLine( 2,  0,  0,  2);
-        oled->drawLine( 0, 15,  2, 17);
-        oled->drawLine( 125,  0,  127,  2);
-        oled->drawLine( 125, 17,  127, 15);
+        oled_drawRFrame( 0, 0, 127, 18, 3);
     }
 
 	if( ui_sel > 0 ){  // what happens when sel=0 ?
         offs = 12;
-        oled->drawString( 2, 17 +14*(ui_sel-1), ">");
+        oled_drawString( 2, 17 +14*(ui_sel-1), ">");
 	}
 
     for( int i=0; i<4; i++){
@@ -211,11 +183,11 @@ void oledUI() {
         #ifdef UTF8
     	  oled->drawUTF8( x, y, ui_txt[i]);
         #else
-	      oled->drawString( x, y, ui_txt[i]);
+	      oled_drawString( x, y, ui_txt[i]);
         #endif
     }
     
-    oled->display();
+    oled_display();
 }
 
 
@@ -255,81 +227,34 @@ static void oledUpdate(void* pvParameters) {
     }
 }
 
-#if 0
-static void oledUpdateOLD(void* pvParameters) {
-    TickType_t xOledInterval = 1000;  // in ticks (typically ms)
-
-    while (true) {
-        uint16_t file_ticker = 0;
-        oled->clear();
-
-        String state_string = "";
-
-        oled->setTextAlignment(TEXT_ALIGN_LEFT);
-        oled->setFont(ArialMT_Plain_16);
-        oled->drawString(0, 0, state_name());
-
-        if (infile) {
-            oled->clear();
-            oled->setTextAlignment(TEXT_ALIGN_CENTER);
-            oled->setFont(ArialMT_Plain_10);
-            state_string = "File";
-            for (int i = 0; i < file_ticker % 10; i++) {
-                state_string += ".";
-            }
-            file_ticker++;
-            oled->drawString(63, 0, state_string);
-
-            oled->drawString(63, 12, infile->path());
-
-            int progress = infile->percent_complete();
-            // draw the progress bar
-            oled->drawProgressBar(0, 45, 120, 10, progress);
-
-            // draw the percentage as String
-            oled->setFont(ArialMT_Plain_10);
-            oled->setTextAlignment(TEXT_ALIGN_CENTER);
-            oled->drawString(64, 25, String(progress) + "%");
-            xOledInterval = 250;
-        } else if (sys.state == State::Alarm) {
-            oledRadioInfo();
-            xOledInterval = 300;
-        } else {
-            oledDRO();
-            oledRadioInfo();
-            xOledInterval = 300;
-        }
-        oled->display();
-
-        vTaskDelay(xOledInterval);
-    }
-}
-#endif
-
 void display_init() {
 #if defined(BRD_DLC32)
     init_oled(0x3c, GPIO_NUM_0, GPIO_NUM_4, GEOMETRY_128_64);
 #elif defined(BRD_TINYBEE)
-    init_oled(0x3c, GPIO_NUM_16, GPIO_NUM_17, GEOMETRY_128_64);
+    //init_oled(0x3c, GPIO_NUM_16, GPIO_NUM_17, GEOMETRY_128_64);
+    init_oled();
 #else
     init_oled(0x3c, GPIO_NUM_21, GPIO_NUM_22, GEOMETRY_128_64);  // ezNC/MPG
 #endif
 
-    if( EZnc.FlipScreen)
-        oled->flipScreenVertically();
+#ifdef UTF8
+    u8g2->enableUTF8Print();
+    u8g2->setFont(u8g2_font_unifont_t_cyrillic);
+#else
+    oled_setFont();
+#endif
+    oled_setFlipMode();
 
-    // todo: load bitmap image
-    oled->clear();
-    oled->setFont(ArialMT_Plain_16);
+    //oled_setTextAlignment(TEXT_ALIGN_RIGHT);
+    //oled->drawString(127, 63-15, "with FluidNC");
 
-    oled->setTextAlignment(TEXT_ALIGN_RIGHT);
-    oled->drawString(127, 63-15, "with FluidNC");
+    oled_drawString(20, 63-15, "with FluidNC");
 
-    oled->setTextAlignment(TEXT_ALIGN_LEFT);
-    oled->setFont(ArialMT_Plain_24);
-    oled->drawString(10, 10, "ezNC-3");
+    //oled->setTextAlignment(TEXT_ALIGN_LEFT);
+    //oled->setFont(ArialMT_Plain_24);
+    oled_drawString(10, 10, "ezNC-3");
 
-    oled->display();
+    oled_display();
 
     xTaskCreatePinnedToCore(oledUpdate,        // task
                             "oledUpdateTask",  // name for task
@@ -340,7 +265,7 @@ void display_init() {
                             //0  //runs fine ?
                             CONFIG_ARDUINO_RUNNING_CORE  // must run the task on same core
     );
-}
 
+}
 
 #endif

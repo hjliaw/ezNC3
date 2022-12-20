@@ -12,9 +12,14 @@ extern volatile int update_dro;
 extern volatile int update_menu;
 
 void oled_flash(){
-	// not really flash, just clear, then ask for redraw
+       // not really flash, just clear, next cycle will redraw
+#if defined(BRD_TINYBEE)
+        u8g2->clearDisplay();
+        delay(20);
+#else
 	oled->clear();
 	oled->display();
+#endif
 	update_menu = 1;
 }		
 
