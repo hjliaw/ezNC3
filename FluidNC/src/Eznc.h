@@ -3,10 +3,17 @@
 #include <ESP32Encoder.h>
 #endif
 
-#ifdef UTF8
-#define Wchars  15      // TBD, not sure this lib supports UTF8
+// wdith of oled display in charaters
+
+#if defined(USE_U8G2)
+        #if defined(UTF8)
+        #define Wchars  15
+        #define Wchars  15
+        #else
+        #define Wchars  14
+        #endif
 #else
-#define Wchars  16      // wdith of oled display in no. of charaters
+        #define Wchars  16     // no UTF8
 #endif
 
 #define Nstr  64

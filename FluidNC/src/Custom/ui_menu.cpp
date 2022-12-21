@@ -15,7 +15,8 @@ void oled_flash(){
        // not really flash, just clear, next cycle will redraw
 #if defined(BRD_TINYBEE)
         u8g2->clearDisplay();
-        delay(20);
+        //delay(20);
+
 #else
 	oled->clear();
 	oled->display();

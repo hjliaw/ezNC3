@@ -63,7 +63,8 @@ void oled_setFlipMode(){
 }
 
 void oled_drawString( uint8_t x, uint8_t y, String s){
-    u8g2->drawStr( x, y, s.c_str() );
+    // u8g2 starts at lower left corner
+    u8g2->drawStr( x, y+13, s.c_str() );
 }
 
 //void oled_drawUTF8( x, y, ui_txt[i]);
@@ -87,42 +88,43 @@ void oled_drawRFrame(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t r){
 // remove static, need to be called from uI
 void oledDRO() {
     uint8_t oled_y_pos;
-    char msg[16];
+    char msg1[Wchars + 10];   // 14-16 chars + enough padding
+    char msg2[Wchars + 10];
 
     oled_clear();
-    //oled_setFont(DejaVu_Sans_Mono_14);
-    //oled_setTextAlignment(TEXT_ALIGN_LEFT);
+
     if( infile ){
         String p = infile->path();    // scroll long file name ?
         p.replace("/littlefs/", "");
         p.replace("/sd/", "");
-        oled_drawString(0, 0, p.substring(0, Wchars - 4) );
+        sprintf( msg1, "%-20s", p.substring(0, Wchars - 4) );
     }
     else{
-        oled_drawString(0, 0, state_name());
+        sprintf( msg1, "%-20s", state_name());
     }
 
-    // perhaps, don't show X/Y/Z during infile
-
-    //oled_setTextAlignment(TEXT_ALIGN_RIGHT);
     if( sys.state != State::Idle ){  // infile is not a good indicator, compromise
         if( infile ){
             int progress = infile->percent_complete();
-            oled_drawString(126-3*9, 2, String(progress) + "%" );
+            sprintf( msg2, "%2d\%", progress );
         }
         else{
-            oled_drawString(126-3*9, 2, "..." );
+            sprintf( msg2, "..." );
         }
+        strcpy( msg1 + Wchars-4, msg2 );
         //log_warn( "progress " << progress << "% " << String(millis()-run_t0) );
     }
     else{
-        if( gc_state.modal.units == Units::Mm )
-            sprintf( msg, "%.2f %s", jog_stepsize/100.0,  jss_inc ? "<<" : ">>" );
+        if( gc_state.modal.units == Units::Mm )    // max length 10.00 mm  or 1.000 in
+            sprintf( msg2, "%-5.2f %s", jog_stepsize/100.0,  jss_inc ? "<<" : ">>" );
         else
-            sprintf( msg, "%.3f %s", jog_stepsize/1000.0, jss_inc ? "<<" : ">>" );
+            sprintf( msg2, "%5.3f %s", jog_stepsize/1000.0, jss_inc ? "<<" : ">>" );
 
-        oled_drawString(126-8*9, 2, msg );  // need to calculate string length
+        strcpy( msg1 + Wchars - 8, msg2 );
     }
+
+    oled_drawString(0, 2, String(msg1) );
+
 
     // todo: invert X/Y/Y when limit switch tripped
     //oled->drawString(80, 14, "L");  // Limit switch
@@ -131,27 +133,20 @@ void oledDRO() {
     auto ctrl_pins     = config->_control;
     bool prb_pin_state = config->_probe->get_state();
 
-    char axisVal[20];
     float* print_position = get_mpos();
-    mpos_to_wpos(print_position);  // same as ezNC
+    mpos_to_wpos(print_position);  // show wpos, more intuitive
 
-    // only has space for 3-axis ! what about lathe mode ?
+    // only has space for 3-axis ! add lathe mode ?
     for (uint8_t axis = X_AXIS; axis < n_axis; axis++) {
-        oled_y_pos = 19 + (axis * 15);
-        // todo: use alignment
-        String axis_letter = ((axis==jog_axis)? ">":" ") + String(Machine::Axes::_names[axis]) + "  ";
-        //oled_setTextAlignment(TEXT_ALIGN_LEFT);
-        oled_drawString(0, oled_y_pos, axis_letter);
+        sprintf( msg1, "%c%c%20s", (axis==jog_axis)? '>':' ', Machine::Axes::_names[axis], " " );
+        
+        if( gc_state.modal.units == Units::Mm )
+            sprintf( msg2, "%6.2f mm", print_position[axis]);    // ex: 123.56 mm   total of 9 chars
+        else
+            sprintf( msg2, "%6.3f in", print_position[axis]/25.4);
 
-        //oled->setTextAlignment(TEXT_ALIGN_RIGHT);
-        if( gc_state.modal.units == Units::Mm ){
-            snprintf(axisVal, 20 - 1, "%.2f mm", print_position[axis]);
-            oled_drawString( 126-8*9, oled_y_pos, axisVal);
-        }
-        else{
-            snprintf(axisVal, 20 - 1, "%.3f in", print_position[axis]/25.4);
-            oled_drawString( 126-9*9, oled_y_pos, axisVal);
-        }
+        strcpy( msg1 + Wchars-9, msg2);
+        oled_drawString(0, 19 + axis*15, msg1);
     }
     oled_display();
 }
@@ -195,6 +190,8 @@ static void oledUpdate(void* pvParameters) {
     int32_t old_pos[MAX_N_AXIS];
 
     vTaskDelay(1000);  // wait for flash screen, 600-ms wco is not updated
+
+    vTaskDelay(1000);
 
     uimenu_active=0;
     update_dro = 1;
@@ -252,7 +249,10 @@ void display_init() {
 
     //oled->setTextAlignment(TEXT_ALIGN_LEFT);
     //oled->setFont(ArialMT_Plain_24);
-    oled_drawString(10, 10, "ezNC-3");
+
+    u8g2->setFont( u8g2_font_timB24_tr );
+    oled_drawString(10, 26, "ezNC-3");
+    oled_setFont();
 
     oled_display();
 

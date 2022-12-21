@@ -37,7 +37,9 @@ void init_oled()
 #if defined(BRD_EZMPG)  || defined (BRD_DLC32)
     oled = new SH1106Wire(address, sda_gpio, scl_gpio, geometry, I2C_ONE, 400000);
 #elif defined(BRD_TINYBEE)
+    //u8g2 = new U8G2_ST7920_128X64_F_SW_SPI(U8G2_R0, 0, 21, 4);  // TODO: pass parameters
     u8g2 = new U8G2_ST7920_128X64_F_SW_SPI(U8G2_R0, 0, 21, 4);  // TODO: pass parameters
+
 #else
     oled = new SSD1306Wire(address, sda_gpio, scl_gpio, geometry, I2C_ONE, 400000);
 #endif

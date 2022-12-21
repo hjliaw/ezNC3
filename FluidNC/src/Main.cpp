@@ -51,7 +51,7 @@ eznc_t EZnc;
   #define ENCA GPIO_NUM_36
   #define ENCB GPIO_NUM_39
 #elif BRD_TINYBEE
-  #define SW1  GPIO_NUM_39    // TB
+  #define SW1  GPIO_NUM_13    // EXP1   (not TB)
   #define SWL  GPIO_NUM_36    // TH1
   #define SWR  GPIO_NUM_34    // TH2, need to shift jumper
   #define ENCA GPIO_NUM_14
