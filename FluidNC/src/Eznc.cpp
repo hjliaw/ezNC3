@@ -937,9 +937,10 @@ void ez_set_AB()
 #define Nm 4
     char menu[Nm][Nstr] = {
         "Set Pos As",
-        "Back to DRO",
-        "B",
-        "A"   };
+        "cancel",
+        "point B",
+        "point A"   };
+
     clearBtnTouch();
     select_from_menu( Nm, menu, &sel, &smin );  // blocking
 #undef Nm
@@ -968,7 +969,7 @@ void ez_set_Zero()
 #define Nm 7 
     char menu[Nm][Nstr] = {
         "Set Pos As",
-        "Back to DRO",
+        "cancel",
         "Xo,Yo,Zo",
         "Xo,Yo",
         "Xo",
@@ -1021,9 +1022,9 @@ void ez_set_pos()
         "Set As",
         "B or A",
         "Xo/Yo/Zo",
-        "XY",
-        "Z",
-        "Back to DRO",
+        "XY=",
+        "Z=",
+        "cancel",
         };
     clearBtnTouch();
     select_from_menu( Nm, menu, &sel, &smin );  // blocking
@@ -1139,7 +1140,7 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
                 push_gcode( String( eznc_line ) );
             }
         }
-        else{  // 2D sweep with 75% over_lap, move to nearest corner first
+        else{  // 2D sweep with 80% over_lap, move to nearest corner first
             float p0[2], p1[2];
             sprintf( pfmsg[0], "Power Feed X/Y" );
 
@@ -1161,7 +1162,7 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
             // always sweep x-first
             dx = p1[0] - p0[0];
             dy = p1[1] - p0[1];
-            float ystep = EZnc.tool_dia * 0.75;
+            float ystep = EZnc.tool_dia * 0.8;
             if( dy < 0 ) ystep = -ystep;
             int Ny = abs(lroundf(dy/ystep));
 
@@ -1172,6 +1173,8 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
 
             sprintf( eznc_line, "G91G1X%.4fF%.0f", dx, EZnc.run_speed );  // first x-cut
             push_gcode( String( eznc_line ) );
+
+            // pocket cut ? TODO: create a new pocket function to allow spiral in/out & fancier options
 
             for( int i=0; i < Ny; i++ ){
                 if( fabs( p0[1]+i*ystep - p1[1] ) > EZnc.tool_dia/2 ){
@@ -1189,11 +1192,13 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
         sprintf( pfmsg[3], "touchR to cancel" );
         u8g_print( pfmsg[0], pfmsg[1], pfmsg[2], pfmsg[3] );
 
+#if 0
         log_info( pfmsg[0] );
         log_info( "cmd list");
         for( int i=0; i<cmd_cnt; i++){
             log_info( "  " << i << "  " << gcname[i] );
         }
+#endif
     }
 
     // try dual cmd, single loop
@@ -1252,10 +1257,21 @@ void ez_goto_AB()
     int8_t sel=1, smin=1;
 #define Nm 4
     char menu[Nm][Nstr] = {
-        "Goto A/B on XY",
-        "Back to DRO",
+        "Goto B or A",
+        "cancel",
         "B",
         "A"   };
+
+   // show coordinate, but even 18 chars is not enough to show unit
+    if( gc_state.modal.units == Units::Mm ){
+        sprintf( menu[2], "B %5.1f, %-5.1f", mark_B[0], mark_B[1] );
+        sprintf( menu[3], "A %5.1f, %-5.1f", mark_A[0], mark_A[1] );
+    }
+    else{
+        sprintf( menu[2], "B %5.2f, %-5.2f", mark_B[0]*MM2INCH, mark_B[1]*MM2INCH );
+        sprintf( menu[3], "A %5.2f, %-5.2f", mark_A[0]*MM2INCH, mark_A[1]*MM2INCH );
+    }
+
     clearBtnTouch();
     select_from_menu( Nm, menu, &sel, &smin );  // blocking
 #undef Nm
@@ -1287,7 +1303,7 @@ void ez_goto_XYZ0()
 #define Nm 7
     char menu[Nm][Nstr] = {   // if stay here, menu can be simplified
         "Goto",
-        "Back to DRO",
+        "cancel/return",
         "Xo",
         "Yo",
         "Xo,Yo",
@@ -1329,10 +1345,10 @@ void ez_goto_XY()
 #define Nm 4
     int8_t sel=1, smin=1;
     char menu[Nm][Nstr] = { 
-        "Goto XY",
-        "Back to DRO",  // missed comma will pass compilier
-        "Relative",
-        "Absolute"
+        "Goto",
+        "cancel/return",  // missed comma will pass compilier
+        "XY Relative",
+        "XY Absolute"
     };
     clearBtnTouch();
     select_from_menu( Nm, menu, &sel, &smin );
@@ -1367,10 +1383,10 @@ void ez_goto_Z()
 #define Nm 4
     int8_t sel=1, smin=1;
     char menu[Nm][Nstr] = { 
-        "Goto Z",
-        "Back to DRO",
-        "Relative",
-        "Absolute",
+        "Goto",
+        "cancel/return",
+        "Z Relative",
+        "Z Absolute",
     };
     clearBtnTouch();
     select_from_menu( Nm, menu, &sel, &smin );  // blocking
@@ -1404,11 +1420,11 @@ void ez_goto_pos()        // run_speed, perhaps add rapid position
 #define Nm 6
     char menu[Nm][Nstr] = {
         "Goto Position",
-        "B or A",
+        "B or A (on XY)",
         "Xo/Yo/Zo",
         "XY",
         "Z",
-        "Back to DRO",   // sub-menu has return to DRO as 1st choice
+        "cancel/return",   // sub-menu has return to DRO as 1st choice
     };
 
     clearBtnTouch();
@@ -1598,9 +1614,8 @@ void eznc_dispatch( void )    // top level dispatcher
 
     if( ez_check_cancel && gcode_started && sys.state == State::Idle  ){
         // may be tripped right after file started ?  sys.state is not updated quickly
-        // solution: process touchR in ISR
+        // solution: process touchR in ISR,    the following may be unnecessary
         //ez_check_cancel = false;
-        log_warn( "ez_check_cancel cleared");    
         gcode_started = false;
         ez_gcfn[0] == 0;   // no good way to clear this w/o changing FluidNC
     }
