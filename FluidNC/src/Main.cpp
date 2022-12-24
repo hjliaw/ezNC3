@@ -102,6 +102,8 @@ void IRAM_ATTR handleInterruptSWL() {
     }
 }
 
+void ez_cancel_jog();
+
 void IRAM_ATTR handleInterruptSWR() {
     unsigned long t, dt;
     t = millis();
@@ -117,7 +119,9 @@ void IRAM_ATTR handleInterruptSWR() {
             sys.abort = true;
             touchedR = 0;
             ez_check_cancel = false;
-        }        
+        }
+        else
+            if( sys.state == State::Jog ) ez_cancel_jog();
     }
 }
 

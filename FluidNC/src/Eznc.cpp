@@ -37,7 +37,7 @@ volatile bool ez_check_cancel =0;
 volatile bool ez_run_pwrfd =0;
 
 char   gbuf[16][Nstr];
-unsigned long jog_t0, ez_t0, ez_t1;
+unsigned long jog_t0, jog_cancel_t = 0;
 char eznc_line[LINE_BUFFER_SIZE];
 int cancelJog;
 int jog_axis = 0;   // 0..2 for now                                                                                      
@@ -271,44 +271,34 @@ void ez_jog( int32_t rot ){
     jog_t0 = millis();
 
     if( odir * rot < 0 ){  // reversal                                                                                 
-        cancelJog = 1;      //ez_cancel_jog();                                                                         
-        // some encoders have big jump on reversal ?                                                                   
+        cancelJog = 1;                                                               
+        // some encoders have big jump on reversal                                                                 
         rot = (rot > 0) ? 1 : -1;   // can't just clear, hack it                                                       
     }
     else{
         float jstep;
-        int arot = (rot > 0) ? rot : -rot;
-
         if( gc_state.modal.units == Units::Mm )
-            jstep = 0.01*jog_stepsize*rot/2.0;     // two ticks per detent
-
+            jstep =  0.01*jog_stepsize*rot/2.0;     // two ticks per detent
         else
             jstep = 0.0254*jog_stepsize*rot/2.0;
 
-#if 0
-        // new algorithm
-        if( arot >  5 ) jstep *= 2;
-        if( arot >  9 ) jstep *= 2;
-        if( arot > 14 ){   // bigger but not too big step makes jogging smoother
-            if( rot > 0)
-                jstep = +EZnc.jog_speed/50;
-            else
-                jstep = -EZnc.jog_speed/50;
-        }
-#endif
         sprintf( eznc_line, "$J=G21G91%c%.4fF%.1f", axis[jog_axis], jstep, EZnc.jog_speed );
+
+        log_warn( "DBG: " << eznc_line );
         //report_status_message(gc_execute_line(eznc_line, Uart0), Uart0);
         gc_execute_line(eznc_line, Uart0);
-        ezJog = 1;                                                                     
+        ezJog = 1;                                             
     }
     odir = rot;
 }
 
 void ez_cancel_jog(){
+    log_warn("DBG: ez cancel jog");
     if (sys.state == State::Jog ) {
         protocol_send_event(&motionCancelEvent);                                                                   
     }
     ezJog = 0;  // not sure necessary
+    jog_cancel_t = millis();
 }
 
 //-------------------------------------------------------------------------
@@ -1506,82 +1496,60 @@ void ez_dro()
 {
 
     if( sys.state == State::Idle || sys.state == State::Jog ){
-        enc_cnt = readEncoder(1);  // 1=no double reads
-        if( enc_cnt != 0 ){
-            //log_info( "DBG: enc_cnt= " << enc_cnt );
+        enc_cnt = readEncoder(1);  // no double reads
+        if( enc_cnt != 0 && (millis() - jog_cancel_t) > 500 ){
             ez_jog( enc_cnt );
         }
-#if 0
-        else{
-            unsigned long jog_dt = millis() - jog_t0;
-            if( jog_dt > 150 && ezJog ){   // avoid multiple calls
-                cancelJog = 1;
-                jog_t0 += jog_dt;
-            }
-        }
-        if( cancelJog ) ez_cancel_jog();
-#endif
     }
 
-    if( btnClicked() || touched() ){ // todo: individual button clear
+    // TOOD: turn knob to override feed-rate
+
+    if( touched() ){ // todo: individual button clear
   
         if( touchedL ){
             jog_axis = (jog_axis+1) % 3;
             update_dro = 1;
-            //log_info( "SWL jog axis " << jog_axis );
         }
             
         if( touchedR ){
-#if 0
-            if( sys.state == State::Idle || sys.state == State::Jog ){
-                jog_stepsize = jog_stepsize << 1;
-                if( jog_stepsize > 4 ) jog_stepsize = 1;
-#else
             if( sys.state == State::Jog ){
                 ez_cancel_jog();
             }
             else if( sys.state == State::Idle ){
-                if( jss_inc )    // 1, 10, 100, 1000
-                    jog_stepsize = jog_stepsize * 10;
-                else
-                    jog_stepsize = jog_stepsize / 10;
+                if( jss_inc )  jog_stepsize *= 10;
+                else           jog_stepsize /= 10;
 
-                if( jog_stepsize > 5000 ){
-                    jss_inc = false;
-                    jog_stepsize = 100;
+                if( jog_stepsize > 5000 ){     // limit to 1..1000
+                    jss_inc = false;   jog_stepsize = 100;
                 }
                 if( jog_stepsize < 1 ){
-                    jss_inc = true;
-                    jog_stepsize = 10;
+                    jss_inc = true;    jog_stepsize = 10;
                 }
-#endif
                 update_dro = 1;
-                //log_info( "SWR jog step " << jog_stepsize );
             }
-            if( sys.state == State::Cycle )
+            else if( sys.state == State::Cycle )
                 sys.abort = true;
         }
-
-        if( clickCounterSW1 ){  // click main button in DRO enters ui menu mode
-            uimenu_active = 1;
-            ez_menu();
-            if( ! ez_run_pwrfd ){    // pwr feed wants to control screen
-                uimenu_active = 0;
-                update_dro = 1;
-            }
-            //log_warn( "HJL: returned from ez_menu" );
-        }
-        clearBtnTouch();            
     }
+
+    // click while running ? currently has no effect, perhaps do hold/pause
+
+    if( clickCounterSW1 &&  sys.state == State::Idle ){  // click main button in DRO enters ui menu mode
+        uimenu_active = 1;
+        ez_menu();
+        if( ! ez_run_pwrfd ){    // pwr feed wants to control screen
+            uimenu_active = 0;
+            update_dro = 1;
+        }
+    }
+    clearBtnTouch();            
 }
 
-void ez_ui()  // NOT used, current ui_menu is blocking
+void ez_ui()  // NOT used, current ui_menu is blocking, much easier to implement
 {
-#ifndef NO_ENCODER
     enc_cnt = readEncoder(0);
     if( enc_cnt != 0 ){
     }
-#endif
 
     if( btnClicked() || touched() ){
         if( touchedL ){
@@ -1600,7 +1568,6 @@ void ez_ui()  // NOT used, current ui_menu is blocking
 }
 
 // called by protocal loop, try to be as short as possible
-// TODO; disable jogging when running ?
 
 bool gcode_started = false;
 
