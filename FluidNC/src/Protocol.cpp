@@ -263,10 +263,12 @@ void protocol_auto_cycle_start() {
 // NOTE: The sys_rt_exec_state.bit variable flags are set by any process, step or serial interrupts, pinouts,
 // limit switches, or the main program.
 void protocol_execute_realtime() {
+/*done in ISR
     if( ez_check_cancel && touchedR ){
         sys.abort = true;   // or set rtReset ?
         touchedR = 0;
     }
+*/
     protocol_exec_rt_system();
     if (sys.suspend.value) {
         protocol_exec_rt_suspend();

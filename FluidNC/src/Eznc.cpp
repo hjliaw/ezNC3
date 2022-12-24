@@ -1593,9 +1593,14 @@ void eznc_dispatch( void )    // top level dispatcher
     // tricky to get it right
     // is it really compatible with pwr fd cycles ?
 
-    if( ez_check_cancel && sys.state == State::Cycle ) gcode_started = true;
+    if( ez_check_cancel && sys.state == State::Cycle )
+        gcode_started = true;
+
     if( ez_check_cancel && gcode_started && sys.state == State::Idle  ){
-        ez_check_cancel = false;
+        // may be tripped right after file started ?  sys.state is not updated quickly
+        // solution: process touchR in ISR
+        //ez_check_cancel = false;
+        log_warn( "ez_check_cancel cleared");    
         gcode_started = false;
         ez_gcfn[0] == 0;   // no good way to clear this w/o changing FluidNC
     }

@@ -93,7 +93,7 @@ void IRAM_ATTR handleInterruptSWL() {
     unsigned long t, dt;
     t = millis();
     dt = t - lastBTtimeSWL;
-    if( dt < 250 ) return;
+    if( dt < 450 ) return;
 
     swL_status = digitalRead(SWL);
     if( swL_status == LOW ){
@@ -106,12 +106,18 @@ void IRAM_ATTR handleInterruptSWR() {
     unsigned long t, dt;
     t = millis();
     dt = t - lastBTtimeSWR;
-    if( dt < 250 ) return;
+    if( dt < 450 ) return;
     
     swR_status = digitalRead(SWR);
     if( swR_status == LOW ){
         lastBTtimeSWR = t;
         touchedR++;
+
+        if( ez_check_cancel ){
+            sys.abort = true;
+            touchedR = 0;
+            ez_check_cancel = false;
+        }        
     }
 }
 
