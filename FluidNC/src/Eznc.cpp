@@ -999,6 +999,7 @@ void ez_set_Zero()
             break;
     }
     gc_execute_line(eznc_line, Uart0);
+
     return;
 }
 
@@ -1179,7 +1180,7 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
 
         cmd_idx = 0;
         pfmsg[1][0] = pfmsg[2][0] = 0;
-        sprintf( pfmsg[3], "touchR to cancel" );
+        sprintf( pfmsg[3], "cancel = touchR" );
         u8g_print( pfmsg[0], pfmsg[1], pfmsg[2], pfmsg[3] );
 
 #if 0
@@ -1220,8 +1221,8 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
             //ez_pwr_fd_reset();     // repeat
             sprintf( pfmsg[0], "Power Feed Done" );
             pfmsg[1][0] = 0;
-            sprintf( pfmsg[2], " click to repeat" );
-            sprintf( pfmsg[3], "touchR to cancel" );
+            sprintf( pfmsg[2], "repeat = click" );
+            sprintf( pfmsg[3], "cancel = touchR" );
             u8g_print( pfmsg[0], pfmsg[1], pfmsg[2], pfmsg[3] );
             clearBtnTouch();
             while( !touchedR && ! btnClicked() ){

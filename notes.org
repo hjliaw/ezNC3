@@ -15,10 +15,12 @@
 * TODO circlar cut ? inner or outer, if peripheral or clear-cut 
 * TODO inner-edge & outer-edge cuts (jig ?)
 * TODO encoder to speed up or slow down a cut
+* DONE cancel jog usually leads to step change
+* TODO power feed need to cover two end positions
+* DONE power up point set as origin, may be different from what others expect
 * DONE save user config to a file or EEPROM
         tool_dia, jog_speed, run_speed, ui encoder direction, screen flip
-* Q: goto position with jog speed or run speed ? run, safer
-
+* DONE goto position with jog speed or run speed ? run, safer
 * NOTE: two cases where touchR is not cancel
 ** set single float number 
 ** goto or set position XY, Z
@@ -26,4 +28,5 @@
 * ui menu is not very responsive
 * need a way to clear errors upon boot up
   door or limit switch error may be tripped
+
 

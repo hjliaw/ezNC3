@@ -121,7 +121,10 @@ void IRAM_ATTR handleInterruptSWR() {
             ez_check_cancel = false;
         }
         else
-            if( sys.state == State::Jog ) ez_cancel_jog();
+            if( sys.state == State::Jog ){
+                ez_cancel_jog();
+                touchedR = 0;  // w/o this, jog step keeps changing after cancel
+            }
     }
 }
 
@@ -209,7 +212,7 @@ void setup() {
     pinMode( ENCB, INPUT_PULLDOWN);
 
     encUI.clearCount();
-    encUI.attachHalfQuad( ENCA, ENCB );  // duh
+    encUI.attachHalfQuad( ENCA, ENCB );
 
     pinMode( SW1, INPUT_PULLUP);
     attachInterrupt( SW1, handleInterruptSW1, FALLING );
@@ -332,9 +335,13 @@ void setup() {
 }
 
 static void reset_variables() {
+
+    float* px;
+ 
     // Reset primary systems.
     system_reset();
     protocol_reset();
+
     gc_init();  // Set g-code parser to default state
     // Spindle should be set either by the configuration
     // or by the post-configuration fixup, but we test
@@ -363,6 +370,12 @@ void loop() {
     static int tries = 0;
     try {
         reset_variables();
+
+        // HJL: wco is set in gc_init(), hack to clear upon boot-up
+        char gcmd[128];
+        sprintf( gcmd, "G10L20P1X0Y0Z0");
+        gc_execute_line(gcmd, Uart0);
+
         // Start the main loop. Processes program inputs and executes them.
         // This can exit on a system abort condition, in which case run_once()
         // is re-executed by an enclosing loop.  It can also exit via a

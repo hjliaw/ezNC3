@@ -224,6 +224,17 @@ static void oledUpdate(void* pvParameters) {
 
     vTaskDelay(1000);  // wait for flash screen, 600-ms wco is not updated
 
+    // HJL: set wpos=0 upon boot up, makes life much easier
+    // especially when only one wco is implemented, G10L20Pn  n=0,1 has the same effect
+
+    // mpos ==0 upon boot up, wpos !=0 if one has set pos with G10L20Pn, n=0 or1
+    // 
+
+    float* px = get_mpos();
+    log_warn( "1s after bootup, mpos= " <<  px[0] << ", " << px[1] << ", " << px[2] );
+    mpos_to_wpos(px);
+    log_warn( "1s after bootup, wpos= " <<  px[0] << ", " << px[1] << ", " << px[2] );
+
     uimenu_active=0;
     update_dro = 1;
 
