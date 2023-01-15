@@ -115,7 +115,7 @@ void IRAM_ATTR handleInterruptSWR() {
         lastBTtimeSWR = t;
         touchedR++;
 
-        if( ez_check_cancel ){
+        if( ez_check_cancel ){   // aborts right away, but stuck in run
             sys.abort = true;
             touchedR = 0;
             ez_check_cancel = false;
@@ -371,10 +371,10 @@ void loop() {
     try {
         reset_variables();
 
-        // HJL: wco is set in gc_init(), hack to clear upon boot-up
-        char gcmd[128];
-        sprintf( gcmd, "G10L20P1X0Y0Z0");
-        gc_execute_line(gcmd, Uart0);
+        // setting mark_A as power up position is better
+        float* pos = get_mpos();
+        mpos_to_wpos(pos);
+        for( int i=0; i<3; i++) mark_A[i] = pos[i];
 
         // Start the main loop. Processes program inputs and executes them.
         // This can exit on a system abort condition, in which case run_once()

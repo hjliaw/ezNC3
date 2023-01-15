@@ -1080,6 +1080,14 @@ void push_gcode( String gc )
         log_warn( "too many g-code lines, some are dropped");
 }
 
+void dbg_pos()
+{
+    float* px = get_mpos();
+    log_info( "DBG mpos= " <<  px[0] << ", " << px[1] << ", " << px[2] );
+    mpos_to_wpos(px);
+    log_info( "    wpos= " <<  px[0] << ", " << px[1] << ", " << px[2] );
+}
+
 // quirk: run pwr fd after reset, screen will stay in run pwr fd
 // sometimes, stay in uimenu ?
 
@@ -1101,10 +1109,14 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
 
     if( !ez_run_pwrfd ) return;
 
+    // called by dispatcher repeatedly
+
     if( cmd_cnt == 0 && sys.state == State::Idle && !cmd_issued ){  // init
         float dx, dy, dA, dB;
         dx = mark_A[0] - mark_B[0];
         dy = mark_A[1] - mark_B[1];
+
+        dbg_pos();
 
         // where am I, closer to mark-A or mark-B
         float* pos = get_mpos();
@@ -1135,7 +1147,7 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
                 push_gcode( String( eznc_line ) );
             }
         }
-        else{  // 2D sweep with 80% over_lap, move to nearest corner first
+        else{  // 2D power feed, move to nearest corner first
             float p0[2], p1[2];
             sprintf( pfmsg[0], "Power Feed X/Y" );
 
@@ -1151,36 +1163,33 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
             sprintf( eznc_line, "X/Y  p0=[%.2f, %.2f]  p1=[%.2f, %.2f", p0[0], p0[1], p1[0], p1[1]);
             log_warn( eznc_line );
 
-            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", p0[0], p0[1], EZnc.run_speed );
-            push_gcode( String( eznc_line ) );
 
-            // always sweep x-first
+            // sweep x-first, 
             dx = p1[0] - p0[0];
             dy = p1[1] - p0[1];
-            float ystep = EZnc.tool_dia * 0.8;
-            if( dy < 0 ) ystep = -ystep;
-            int Ny = int(fabs(dy/ystep)) + 1;
 
-            ystep = dy / Ny;
+            float dd = EZnc.tool_dia * 0.85;  // diameter (with overlap)
+            int Ny = 1 + int(fabs(dy/dd));
+            float ystep = dy / Ny;
 
             log_info( "     dx=" << dx );
             log_info( "     dy=" << dy );
             log_info( "  ystep=" << ystep );
             log_info( "     Ny=" << Ny );
 
+            // TODO: new pocket function to allow spiral in/out & fancier options
+
+            sprintf( eznc_line, "G90G1X%.4fY%.4fF%.0f", p0[0], p0[1], EZnc.run_speed );
+            push_gcode( String( eznc_line ) );
+
             sprintf( eznc_line, "G91G1X%.4fF%.0f", dx, EZnc.run_speed );  // first x-cut
             push_gcode( String( eznc_line ) );
 
-            // pocket cut ? TODO: create a new pocket function to allow spiral in/out & fancier options
-
             for( int i=0; i < Ny; i++ ){
-                if( fabs( p0[1]+i*ystep - p1[1] ) > EZnc.tool_dia/2 ){
                     sprintf( eznc_line, "G91G1Y%.4fF%.0f", ystep, EZnc.run_speed );
                     push_gcode( String( eznc_line ) );
-
                     sprintf( eznc_line, "G91G1X%.4fF%.0f", (i%2==0) ? -dx:+dx, EZnc.run_speed );
                     push_gcode( String( eznc_line ) );
-                }
             }
         }
 
@@ -1213,7 +1222,7 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
     }
 
     // try dual cmd, single loop
-    // implemented a simple g-code sender here
+    // a simple g-code sender here
 
     if( ! touchedR && sys.state == State::Idle && ! cmd_issued ){
     
@@ -1240,23 +1249,29 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
         if( cmd_idx >= cmd_cnt ){
             // perhaps, show cancel at upper right corner, repeat at lower left
 
+            dbg_pos();
+
             sprintf( pfmsg[0], "Power Feed Done" );
             pfmsg[1][0] = 0;
             sprintf( pfmsg[2], "cancel = touchR" );
             sprintf( pfmsg[3], "repeat = click" );
             u8g_print( pfmsg[0], pfmsg[1], pfmsg[2], pfmsg[3] );
+
             clearBtnTouch();
             while( !touchedR && ! btnClicked() ){
                 delay(100);
             }
-            if( btnClicked() ){
+
+            // touchedR handled by isr
+            
+            if( btnClicked() ){  // auto repeat by dispatcher
                 cmd_finished = true;
                 cmd_issued   = false;
                 cmd_started  = false;
                 cmd_cnt = 0;
             }
         }
-        else{
+        else{ // ?
             cmd_issued = false;
             cmd_started = false;
             cmd_finished = true;

@@ -4,20 +4,13 @@
         had to modify oled library to add new font
         had to add encoder library
         added encoder & buttons, still ok
-** foo_bar state preserved
+** foo_bar state preserved, X-file
 * DONE need to debounce main switch  MAY need more
-* DONE "mark" one or two positions, then "pwr feed"
-        dy != 0, repeat N (zig-zag, used for surfaceing or pocket)
-        dz  < 0, repeat N (deeper z on each travel), Q: one-way or two-way cuts ? 
 * TODO drill and peck drill
 * TODO enlarge hole
-* Q: learn and repeat ?
 * TODO circlar cut ? inner or outer, if peripheral or clear-cut 
 * TODO inner-edge & outer-edge cuts (jig ?)
 * TODO encoder to speed up or slow down a cut
-* DONE cancel jog usually leads to step change
-* TODO power feed need to cover two end positions
-* DONE power up point set as origin, may be different from what others expect
 * DONE save user config to a file or EEPROM
         tool_dia, jog_speed, run_speed, ui encoder direction, screen flip
 * DONE goto position with jog speed or run speed ? run, safer
@@ -29,4 +22,7 @@
 * need a way to clear errors upon boot up
   door or limit switch error may be tripped
 
-
+* BUGS
+** cancel power feed leads to freezed state
+** cancel gcode doesn't update DRO
+** sometimes, power up in hold, door, ... ?
