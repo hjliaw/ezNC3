@@ -1072,8 +1072,10 @@ void ez_pwr_fd_reset()
 
 void push_gcode( String gc )
 {
-    if(cmd_cnt < 500 )
+    if(cmd_cnt < 500 ){
         gcname[cmd_cnt++] = gc;
+        log_info( "DBG PF: " << gc );
+    }
     else
         log_warn( "too many g-code lines, some are dropped");
 }
@@ -1084,6 +1086,8 @@ void push_gcode( String gc )
 // return to origin ?
 // 2D: lift Z a little (custom Zlift, Zsafe ?)
 // 1D: lift or move away (too many options)
+
+// TODO: add spiral-in, spiral-out option -> pocket cuts
 
 void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
 {
@@ -1155,7 +1159,9 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
             dy = p1[1] - p0[1];
             float ystep = EZnc.tool_dia * 0.8;
             if( dy < 0 ) ystep = -ystep;
-            int Ny = abs(lroundf(dy/ystep));
+            int Ny = int(fabs(dy/ystep)) + 1;
+
+            ystep = dy / Ny;
 
             log_info( "     dx=" << dx );
             log_info( "     dy=" << dy );
@@ -1176,6 +1182,20 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
                     push_gcode( String( eznc_line ) );
                 }
             }
+        }
+
+        // if user clicks pwr feed w/o moving
+        if( fabs(dx) < 1e-4 && fabs(dy) < 1e-4 ){
+            sprintf( pfmsg[0], "Points A == B" );
+            pfmsg[1][0] = 0;
+            sprintf( pfmsg[2], "nothing to do" );
+            sprintf( pfmsg[3], "touchR to cont." );
+            u8g_print( pfmsg[0], pfmsg[1], pfmsg[2], pfmsg[3] );
+
+            clearBtnTouch();   // only touch-R works ? why ?
+            while( ! btnClickedRlsd() && !touched()  );
+            clearBtnTouch();
+            return;
         }
 
         cmd_idx = 0;
@@ -1218,11 +1238,12 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
 
     if( cmd_started && sys.state == State::Idle ){   // ready for more command
         if( cmd_idx >= cmd_cnt ){
-            //ez_pwr_fd_reset();     // repeat
+            // perhaps, show cancel at upper right corner, repeat at lower left
+
             sprintf( pfmsg[0], "Power Feed Done" );
             pfmsg[1][0] = 0;
-            sprintf( pfmsg[2], "repeat = click" );
-            sprintf( pfmsg[3], "cancel = touchR" );
+            sprintf( pfmsg[2], "cancel = touchR" );
+            sprintf( pfmsg[3], "repeat = click" );
             u8g_print( pfmsg[0], pfmsg[1], pfmsg[2], pfmsg[3] );
             clearBtnTouch();
             while( !touchedR && ! btnClicked() ){
