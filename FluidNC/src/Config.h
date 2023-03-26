@@ -200,14 +200,7 @@ const bool ALLOW_FEED_OVERRIDE_DURING_PROBE_CYCLES = false;
 // INCLUDE_OLED_IO enables access to a basic OLED library.  To use it you must uncomment the
 //  "thingpulse/ESP8266 and ESP32 OLED driver for SSD1306 displays" line in platformio.ini
 // You must uncomment it if you use either INCLUDE_OLED_TINY or INCLUDE_OLED_BASIC
-
-// HJL: note, used sda pin as sw serial to test 2209
-// defined by platform.ini
-
-//#ifndef INCLUDE_OLED_IO
-//#define INCLUDE_OLED_IO
-//#define INCLUDE_OLED_BASIC
-//#endif
+// #define INCLUDE_OLED_IO
 
 // INCLUDE_OLED_TINY includes a driver for a very small 64x48 OLED display
 // #define INCLUDE_OLED_TINY

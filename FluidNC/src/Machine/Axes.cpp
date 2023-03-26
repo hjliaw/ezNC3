@@ -148,15 +148,9 @@ namespace Machine {
     }
 
     void Axes::config_motors() {
-
-    //  HJL debug, repeat for scope measurement
-      //for(;;)
-      {
         for (int axis = 0; axis < _numberAxis; ++axis) {
             _axis[axis]->config_motors();
         }
-        //delay_ms(2000);
-      }
     }
 
     // Some small helpers to find the axis index and axis motor index for a given motor. This

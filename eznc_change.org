@@ -1,0 +1,37 @@
+* file added or changed (git diff --name-only v0.1 v3.6.4)
+  FluidNC/src/Custom/oled_basic.cpp
+  FluidNC/src/Custom/oled_io.cpp
+  FluidNC/src/Custom/oled_io.h
+  FluidNC/src/Protocol.cpp
+  FluidNC/src/Machine/MachineConfig.cpp
+  FluidNC/src/Main.cpp
+** new files
+  FluidNC/src/Custom/ui_menu.cpp
+  FluidNC/src/Eznc.cpp
+  FluidNC/src/Eznc.h
+** tmc5610 surge problem fixed
+  FluidNC/src/Motors/TMC5160Driver.cpp
+  FluidNC/src/Motors/TrinamicBase.cpp
+  FluidNC/src/Motors/TrinamicSpiDriver.cpp
+** u8g2 font, not in use
+  fonts/OLEDDisplayFonts.h
+  fonts/fontX1.h
+  fonts/fontX2.h
+  fonts/mfont.h
+** others: doc, config, data
+  .gitignore
+  FluidNC/ld/esp32/app3M_fs512k.csv
+  FluidNC/ld/esp32/larger_spiffs.csv
+  README.md
+  debug.ini
+  example_configs/MKS_DLC32_V2P0.yaml (new)
+  notes.org
+  platformio.ini
+  release/littlefs512k.bin
+* details
+  cmd: git diff v3.6.4  v0.1 file  (difftool calls meld) 
+** Protocol.cpp (tempararily disable check lmits for fatser debug)
+** oled_basic (lots of eznc stuff)
+** oled_io.cpp (copilier macros for diff brds & oleds)
+** Main.cpp  (eznc isr, init, eeprom utils)
+** Machine/MachineConfig.cpp (keep looping in panic mode, to be removed)

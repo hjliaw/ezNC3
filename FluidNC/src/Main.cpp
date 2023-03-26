@@ -335,13 +335,9 @@ void setup() {
 }
 
 static void reset_variables() {
-
-    float* px;
- 
     // Reset primary systems.
     system_reset();
     protocol_reset();
-
     gc_init();  // Set g-code parser to default state
     // Spindle should be set either by the configuration
     // or by the post-configuration fixup, but we test
@@ -370,13 +366,6 @@ void loop() {
     static int tries = 0;
     try {
         reset_variables();
-
-        // setting mark_A as power up position is not good either
-        // as sometimes, we stop at point-B, stop power feed makes A=B
-        //float* pos = get_mpos();
-        //mpos_to_wpos(pos);
-        //for( int i=0; i<3; i++) mark_A[i] = pos[i];
-
         // Start the main loop. Processes program inputs and executes them.
         // This can exit on a system abort condition, in which case run_once()
         // is re-executed by an enclosing loop.  It can also exit via a
