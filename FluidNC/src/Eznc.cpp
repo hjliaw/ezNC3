@@ -858,7 +858,7 @@ void ez_config()
 {
 #define Nm 9
     int8_t sel=1, smin=1;
-    char menu[9][Nstr] = {
+    char menu[Nm][Nstr] = {
         "Configuration",
         "Go Back",
         "Change Unit",
@@ -1256,6 +1256,10 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
             sprintf( pfmsg[2], "cancel = touchR" );
             sprintf( pfmsg[3], "repeat = click" );
             u8g_print( pfmsg[0], pfmsg[1], pfmsg[2], pfmsg[3] );
+
+            // disable motor to allow user intervene, such as lower z-axis
+            // NOT WORKING protocol_disable_steppers();
+            config->_axes->set_disable(true);
 
             clearBtnTouch();
             while( !touchedR && ! btnClicked() ){

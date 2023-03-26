@@ -371,10 +371,11 @@ void loop() {
     try {
         reset_variables();
 
-        // setting mark_A as power up position is better
-        float* pos = get_mpos();
-        mpos_to_wpos(pos);
-        for( int i=0; i<3; i++) mark_A[i] = pos[i];
+        // setting mark_A as power up position is not good either
+        // as sometimes, we stop at point-B, stop power feed makes A=B
+        //float* pos = get_mpos();
+        //mpos_to_wpos(pos);
+        //for( int i=0; i<3; i++) mark_A[i] = pos[i];
 
         // Start the main loop. Processes program inputs and executes them.
         // This can exit on a system abort condition, in which case run_once()

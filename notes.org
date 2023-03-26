@@ -23,6 +23,46 @@
   door or limit switch error may be tripped
 
 * BUGS
-** cancel power feed leads to freezed state
-** cancel gcode doesn't update DRO
+** GONE ? cancel gcode doesn't update dro
 ** sometimes, power up in hold, door, ... ?
+
+* DONE auto init littlefs doens't work ?
+        had to use '$localfs/format=littlefs' to format
+        and manually copy files over, needs improvement
+** ans: use esptool to copy existing partition
+** notes: use config.yaml instead of tinybee.yaml, considering enlarge file system ?
+** fixed: file system mismatch, fixed by copy the whole partition
+*** dev module panick'd ? tinybee is ok
+        error is caused by littlefs,
+        ./components/esp_littlefs/src/littlefs/lfs.c:1071:error: Corrupted dir pair at {0x0, 0x1}
+*** load eznc, run grbl to format fs, then it is ok ?
+        repeatable with flash erased, need grbl to format file system
+* DONE new partition (some Tinybee may have 8MB)
+  binary file size (fnc @ 20230325)
+** wifi
+   RAM:   [===       ]  26.4% (used 86460 bytes from 327680 bytes)
+   Flash: [========  ]  85.0% (used 1670941 bytes from 1966080 bytes)
+   Wrote   17120 bytes ( 11841 compressed) at 0x00001000
+   Wrote    3072 bytes (   129 compressed) at 0x00008000
+   Wrote    8192 bytes (    47 compressed) at 0x0000e000
+   Wrote 1676720 bytes (997947 compressed) at 0x00010000
+** wifibt NEED new partition table
+   RAM:   [===       ]  28.7% (used 94020 bytes from 327680 bytes)
+   Flash: [==========]  113.7% (used 2235293 bytes from 1966080 bytes)
+   Error: The program size (2235293 bytes) is greater than maximum allowed (1966080 bytes)
+
+   bt stack = 2235293 - 1670941 = 551k bytes
+** settled with the following partition table  app3M_fs512k.csv 
+   # Name,   Type, SubType, Offset,  Size, Flags
+   nvs,      data, nvs,      0x9000,   0x5000,
+   otadata,  data, ota,      0xe000,   0x2000,
+   app0,     app,  ota_0,   0x10000, 0x360000,
+   app1,     app,  ota_1,  0x370000,  0x10000,
+   spiffs,   data, spiffs, 0x380000,  0x80000,
+** read fs
+   python /home/hjack/esp32/tools/esptool/esptool.py --chip esp32 --port /dev/ttyUSB0  read_flash 0x380000 0x80000 littlefs512k.bin
+** write fs
+   file currently saved in ./release/.
+   [optional ?] write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect 
+
+   python /home/hjack/esp32/tools/esptool/esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash 0x380000  littlefs512k.bin
