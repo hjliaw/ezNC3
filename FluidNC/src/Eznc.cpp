@@ -46,7 +46,7 @@ int32_t enc_cnt = 0;
 
 // todo: save parameters permamently (in localfs)
 
-int   jog_stepsize = 1000;
+int   jog_stepsize = 100;   // 1mm
 bool jss_inc = false;
 
 long run_t0;
