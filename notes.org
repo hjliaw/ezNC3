@@ -2,6 +2,7 @@
 ** remove .pio, re-compile OK
 ** copy ezNC sources  OK!  runs w/o wifi client GEE
         had to modify oled library to add new font
+		cp fonts/*  .pio/libdeps/ezTinybee/ESP8266\ and\ ESP32\ OLED\ driver\ for\ SSD1306\ displays/src/.
         had to add encoder library
         added encoder & buttons, still ok
 ** foo_bar state preserved, X-file
