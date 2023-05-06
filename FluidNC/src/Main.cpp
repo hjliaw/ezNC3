@@ -58,8 +58,8 @@ eznc_t EZnc;
   #define ENCB GPIO_NUM_12
 #else
   #define SW1  GPIO_NUM_34  // eznc test jig 
-  #define SWL  GPIO_NUM_14 // was 32, move to encoder pin
-  #define SWR  GPIO_NUM_13 // was 33
+  #define SWL  GPIO_NUM_32  //14 = encoder pin
+  #define SWR  GPIO_NUM_33  //13
   #define ENCA GPIO_NUM_36
   #define ENCB GPIO_NUM_39
 #endif

@@ -63,7 +63,13 @@
 ** read fs
    python /home/hjack/esp32/tools/esptool/esptool.py --chip esp32 --port /dev/ttyUSB0  read_flash 0x380000 0x80000 littlefs512k.bin
 ** write fs
-   file currently saved in ./release/.
-   [optional ?] write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect 
+*** install esptool with pip
+	sudo pip install esptool
+*** write a partition (with some data files)
+   python /home/hjack/esp32/tools/esptool/esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash 0x380000  ./release/littlefs512k.bin
+   or
+   esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash 0x380000  ./release/littlefs512k.bin
 
-   python /home/hjack/esp32/tools/esptool/esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash 0x380000  littlefs512k.bin
+   [options?] write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect 
+
+

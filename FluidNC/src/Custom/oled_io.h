@@ -1,10 +1,12 @@
 #pragma once
 
-//#include <SSD1306Wire.h>
-//extern SSD1306Wire* oled;
-
-#include <SH1106Wire.h>
-extern SH1106Wire* oled;
+#ifdef BRD_EZNC2
+    #include <SSD1306Wire.h>
+    extern SSD1306Wire* oled;
+#else
+    #include <SH1106Wire.h>
+    extern SH1106Wire* oled;
+#endif
 
 extern volatile int updateoled;
 
