@@ -15,18 +15,15 @@
 * DONE save user config to a file or EEPROM
         tool_dia, jog_speed, run_speed, ui encoder direction, screen flip
 * DONE goto position with jog speed or run speed ? run, safer
-* NOTE: two cases where touchR is not cancel
+* NOTE: cases where touchR is not cancel
 ** set single float number 
 ** goto or set position XY, Z
-
 * ui menu is not very responsive
 * need a way to clear errors upon boot up
   door or limit switch error may be tripped
-
 * BUGS
 ** GONE ? cancel gcode doesn't update dro
 ** sometimes, power up in hold, door, ... ?
-
 * DONE auto init littlefs doens't work ?
         had to use '$localfs/format=littlefs' to format
         and manually copy files over, needs improvement
@@ -34,10 +31,10 @@
 ** notes: use config.yaml instead of tinybee.yaml, considering enlarge file system ?
 ** fixed: file system mismatch, fixed by copy the whole partition
 *** dev module panick'd ? tinybee is ok
-        error is caused by littlefs,
-        ./components/esp_littlefs/src/littlefs/lfs.c:1071:error: Corrupted dir pair at {0x0, 0x1}
+    error is caused by littlefs,
+    ./components/esp_littlefs/src/littlefs/lfs.c:1071:error: Corrupted dir pair at {0x0, 0x1}
 *** load eznc, run grbl to format fs, then it is ok ?
-        repeatable with flash erased, need grbl to format file system
+    repeatable with flash erased, need grbl to format file system
 * DONE new partition (some Tinybee may have 8MB)
   binary file size (fnc @ 20230325)
 ** wifi
@@ -72,4 +69,27 @@
 
    [options?] write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect 
 
+* notes on PCB
+** all dip switches should be in "OFF"
+** SDDET /TH2 should be in TH2 position, otherwise right (red) button doesn't work
+* TODO bugs
+** connected by "screen" program, error or Door jamed, but ezNC shows "Idle"
+   [MSG:ERR: Macro can only be used in idle state]
+   [MSG:INFO: Check door]
+   [MSG:INFO: Safety door closed.  Issue cycle start to resume]
+   <Door:0|MPos:0.000,0.000,0.000|FS:0,0|WCO:0.600,11.330,0.000>
+   <Door:0|MPos:0.000,0.000,0.000|FS:0,0|Ov:100,100,99>
+
+** when connected with bCNC, no error as from "screen", putty also works
+   power up MPos=0, Wpos=eznc=(-0.60, -11.3, 0)
+   jog to x+10, y+10, then power feed, stops at (9.4, 0), re-run -> (9.19, -1.33) !
+
+** if x/y has been set, can confuse power feed (debug using putty)
+   power up: MPos=( 0, 0,0), Wpos=eznc=(-0.6, -11.3, 0)   WCO:0.600,11.330,0.000
+   jog  X+Y: MPos=(10,10,0), Wpos=eznc=(+9.4,  -1.3, 0)
+
+   [MSG:WARN: X/Y  p0=[9.40, -1.33]  p1=[0.00, 0.00]
+
+   conclusion: power up MPos=zero, Wpos may be non-zero, since we use Wpos exclusive,
+   try setting mark_A = Wpos upon power up, what happens with reset ?
 

@@ -130,7 +130,16 @@ void protocol_main_loop() {
                 protocol_execute_realtime();  // Enter safety door mode. Should return as IDLE state.
             }
             // All systems go!
+
+            // set mark_A as power up position, may be non-zero
+            float *pos;
+            pos = get_mpos();
+            mpos_to_wpos(pos);
+            for( int i=0; i<3; i++) mark_A[i] = pos[i];
+
             settings_execute_startup();  // Execute startup script.
+
+
         }
     }
 

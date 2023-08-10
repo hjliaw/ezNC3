@@ -600,6 +600,9 @@ static Error motor_enable(const char* value, WebUI::AuthenticationLevel auth_lev
 
 static Error motors_init(const char* value, WebUI::AuthenticationLevel auth_level, Channel& out) {
     config->_axes->config_motors();
+
+    // delay_ms(500);    NO effect on inrush current
+
     return Error::Ok;
 }
 
