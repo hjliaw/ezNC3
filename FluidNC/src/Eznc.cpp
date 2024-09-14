@@ -1535,6 +1535,7 @@ void ez_menu()   // top level ui menu, only title line is auto-scrolled
 
 void ez_dro()
 {
+    static unsigned int lcnt = 0;
 
     if( sys.state == State::Idle || sys.state == State::Jog ){
         enc_cnt = readEncoder(1);  // no double reads
@@ -1583,6 +1584,9 @@ void ez_dro()
             update_dro = 1;
         }
     }
+
+    lcnt++;
+    if( (lcnt % 3000) == 0 ) update_dro = 1;  // force update, in ~1s
     clearBtnTouch();            
 }
 

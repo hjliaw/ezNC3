@@ -50,7 +50,9 @@ else:
 
         rev = " (%s-%s%s)" % (branchname, revision, dirty)
 
-grbl_version = tag.replace('v','').rpartition('.')[0]
+#grbl_version = tag.replace('v','').rpartition('.')[0]
+grbl_version = '1'   # HJL: temp hack for bCNC, need a non-zero value and select GRBL1 in bCNC  
+    
 git_info = '%s%s' % (tag, rev)
 
 provisional = "FluidNC/src/version.cxx"

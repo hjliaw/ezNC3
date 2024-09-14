@@ -1,4 +1,8 @@
-* can not get my_fnc to work, try starting with FluidNC (already slightly modified) 
+* NOTES on ezNC3 (aka eFNC) 
+* use pio/vsc to compile/upload
+** TODO command line fw upload & file system format 
+* config files are at ~/cnc/3dp_boards/FluidNC_config/. 
+* X-FILE: can not get my_fnc to work, try starting with FluidNC (already slightly modified) 
 ** remove .pio, re-compile OK
 ** copy ezNC sources  OK!  runs w/o wifi client GEE
         had to modify oled library to add new font
@@ -72,7 +76,7 @@
 * notes on PCB
 ** all dip switches should be in "OFF"
 ** SDDET /TH2 should be in TH2 position, otherwise right (red) button doesn't work
-* TODO bugs
+* DONE bugs on power up position
 ** connected by "screen" program, error or Door jamed, but ezNC shows "Idle"
    [MSG:ERR: Macro can only be used in idle state]
    [MSG:INFO: Check door]
@@ -93,3 +97,5 @@
    conclusion: power up MPos=zero, Wpos may be non-zero, since we use Wpos exclusive,
    try setting mark_A = Wpos upon power up, what happens with reset ?
 
+* note branch main (stale) has working u8g2 library 
+* TODO Points A==B, shold be any button or rotate dial to exit
