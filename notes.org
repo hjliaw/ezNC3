@@ -99,3 +99,4 @@
 
 * note branch main (stale) has working u8g2 library 
 * TODO Points A==B, shold be any button or rotate dial to exit
+* git push instead of gpush

@@ -53,7 +53,7 @@ namespace Spindles {
         int i;
 
         SpindleSpeed offset;
-        uint32_t     scaler;
+        int32_t     scaler;    // use int32 to allow inverted RPM mapping
 
         // For additional segments we compute a scaler that is the slope
         // of the segment and an offset that is the starting Y (typically
@@ -68,8 +68,13 @@ namespace Spindles {
             scale *= max_dev_speed;
 
             // float scale = deltaPercent * max_dev_speed;
-            scaler           = uint32_t(scale * 65536);  //  computation is done in fixed point with 16 fractional bits.
+            scaler           = int32_t(scale * 65536);  //  computation is done in fixed point with 16 fractional bits.
             _speeds[i].scale = scaler;
+
+            //log_warn("DBG: segment " << i );
+            //log_warn("DBG: offset " << _speeds[i].offset );
+            //log_warn("DBG: scale  " << _speeds[i].scale );
+
         }
 
         // The final scaler is 0, with the offset equal to the ending offset
@@ -115,6 +120,7 @@ namespace Spindles {
         if (speed == 0) {
             return _speeds[0].offset;
         }
+
         int num_segments = _speeds.size() - 1;
         int i;
         for (i = 0; i < num_segments; i++) {
@@ -122,7 +128,7 @@ namespace Spindles {
                 break;
             }
         }
-        uint32_t dev_speed = _speeds[i].offset;
+        uint32_t dev_speed = _speeds[i].offset;   // max=16383 = 2**14
 
         // If the requested speed is greater than the maximum map speed,
         // i will be equal to num_segements, in which case we just return
@@ -134,7 +140,8 @@ namespace Spindles {
             dev_speed += uint32_t((((speed - _speeds[i].speed) * uint64_t(_speeds[i].scale)) >> 16));
         }
 
-        // log_debug("rpm " << speed << " speed " << dev_speed); // This will spew quite a bit of data on your output
+        // HJL TBC
+        //log_warn("DBG: rpm " << speed << " dev_speed (pwm) " << dev_speed); // This will spew quite a bit of data on your output
         return dev_speed;
     }
     void Spindle::spindleDelay(SpindleState state, SpindleSpeed speed) {

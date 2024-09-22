@@ -18,7 +18,7 @@ namespace Configuration {
         SpindleSpeed speed;
         float        percent;
         uint32_t     offset;
-        uint32_t     scale;
+        int32_t     scale;
     } speedEntry;
 
     template <typename BaseType>
