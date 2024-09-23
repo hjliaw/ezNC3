@@ -1,21 +1,21 @@
-* NOTES on ezNC3 (aka eFNC) 
+* NOTES on ezNC3/4 (aka eFNC) 
 * use pio/vsc to compile/upload
-** TODO command line fw upload & file system format 
-* config files are at ~/cnc/3dp_boards/FluidNC_config/. 
+* config files are at ~/cnc/3dp_boards/FluidNC_config/
 * X-FILE: can not get my_fnc to work, try starting with FluidNC (already slightly modified) 
 ** remove .pio, re-compile OK
 ** copy ezNC sources  OK!  runs w/o wifi client GEE
-        had to modify oled library to add new font
-		cp fonts/*  .pio/libdeps/ezTinybee/ESP8266\ and\ ESP32\ OLED\ driver\ for\ SSD1306\ displays/src/.
-        had to add encoder library
-        added encoder & buttons, still ok
+   had to modify oled library to add new font
+   cp fonts/*  .pio/libdeps/ezTinybee/ESP8266\ and\ ESP32\ OLED\ driver\ for\ SSD1306\ displays/src/.
+   had to add encoder library
+   added encoder & buttons, still ok
 ** foo_bar state preserved, X-file
 * DONE need to debounce main switch  MAY need more
-* TODO drill and peck drill
-* TODO enlarge hole
-* TODO circlar cut ? inner or outer, if peripheral or clear-cut 
-* TODO inner-edge & outer-edge cuts (jig ?)
-* TODO encoder to speed up or slow down a cut
+* TODO desired features
+** encoder to speed up or slow down a cut
+** drill and peck drill
+** enlarge existing hole
+** circlar cut ? inner or outer, if peripheral or clear-cut 
+** inner-edge & outer-edge cuts (jig ?)
 * DONE save user config to a file or EEPROM
         tool_dia, jog_speed, run_speed, ui encoder direction, screen flip
 * DONE goto position with jog speed or run speed ? run, safer
@@ -33,13 +33,13 @@
         and manually copy files over, needs improvement
 ** ans: use esptool to copy existing partition
 ** notes: use config.yaml instead of tinybee.yaml, considering enlarge file system ?
-** fixed: file system mismatch, fixed by copy the whole partition
+** DONE file system mismatch, fixed by copy the whole partition
 *** dev module panick'd ? tinybee is ok
     error is caused by littlefs,
     ./components/esp_littlefs/src/littlefs/lfs.c:1071:error: Corrupted dir pair at {0x0, 0x1}
 *** load eznc, run grbl to format fs, then it is ok ?
     repeatable with flash erased, need grbl to format file system
-* DONE new partition (some Tinybee may have 8MB)
+* new partition (some Tinybee may have 8MB)
   binary file size (fnc @ 20230325)
 ** wifi
    RAM:   [===       ]  26.4% (used 86460 bytes from 327680 bytes)
@@ -76,6 +76,15 @@
 * notes on PCB
 ** all dip switches should be in "OFF"
 ** SDDET /TH2 should be in TH2 position, otherwise right (red) button doesn't work
+** gpio 34-39 are input only, set as pwm out can cause 'panic', need to erase flash and re-load good yaml 
+** I2So can not do pwm in fluidnc
+** TB(white)=main switch, TH1(black)=SW-L, TH2(purple)=SW-R/Cancel, needs jumper change
+** J1-MPG, most MPGs work at 3.3V, but some may need 5v, which needs PCB solder change
+** available gpio: X/Y/Z limits, MT_DET, 3DTouch, I2So: FAN1, FAN2, BEEPER, HE1, HE0, HBED
+** sorted out BTN_EN1 (R2) and LCD_CLK (R3) to gpio-14 connection
+   BTN_EN1 is on EXP2, and connected to MPG-EN1, seems BTN_EN1 is connected to esp32
+   LCD_CLK is on EXP2, is connected to N_SCK to motor drivers spi bus
+   Answer: LCD_CLK is not connected to gpio.14, but is connected to SPI_CLK with 0-ohm resistor
 * DONE bugs on power up position
 ** connected by "screen" program, error or Door jamed, but ezNC shows "Idle"
    [MSG:ERR: Macro can only be used in idle state]
