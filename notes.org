@@ -25,12 +25,18 @@
 * ui menu is not very responsive
 * need a way to clear errors upon boot up
   door or limit switch error may be tripped
-* BUGS
+* TODO BUGS
 ** GONE ? cancel gcode doesn't update dro
 ** sometimes, power up in hold, door, ... ?
-* DONE auto init littlefs doens't work ?
-        had to use '$localfs/format=littlefs' to format
-        and manually copy files over, needs improvement
+** sd card not working ?
+** on latest fluidnc, my partition (3M+512k) wifi works well, but (3M+3M+512k) has very weak wifi ?
+   3M+512k may not be able to do OTA update
+** DONE pwm with gpio.22:low works in latest fluidnc, but not the one I branched off
+   however, work-around with negative slope works as well
+   both have same quirk: if motor switch is on, power on motor w/o eznc will have motor running 
+* auto init littlefs doens't work ?
+  had to use '$localfs/format=littlefs' to format
+  and manually copy files over, needs improvement
 ** ans: use esptool to copy existing partition
 ** notes: use config.yaml instead of tinybee.yaml, considering enlarge file system ?
 ** DONE file system mismatch, fixed by copy the whole partition
@@ -39,22 +45,31 @@
     ./components/esp_littlefs/src/littlefs/lfs.c:1071:error: Corrupted dir pair at {0x0, 0x1}
 *** load eznc, run grbl to format fs, then it is ok ?
     repeatable with flash erased, need grbl to format file system
-* new partition (some Tinybee may have 8MB)
-  binary file size (fnc @ 20230325)
-** wifi
+* 20240922 new partition (some Tinybee may have 8MB)
+** binary file size (fnc @ 20230325)
+*** wifi
    RAM:   [===       ]  26.4% (used 86460 bytes from 327680 bytes)
    Flash: [========  ]  85.0% (used 1670941 bytes from 1966080 bytes)
    Wrote   17120 bytes ( 11841 compressed) at 0x00001000
    Wrote    3072 bytes (   129 compressed) at 0x00008000
    Wrote    8192 bytes (    47 compressed) at 0x0000e000
    Wrote 1676720 bytes (997947 compressed) at 0x00010000
-** wifibt NEED new partition table
+*** wifibt NEED new partition table
    RAM:   [===       ]  28.7% (used 94020 bytes from 327680 bytes)
    Flash: [==========]  113.7% (used 2235293 bytes from 1966080 bytes)
    Error: The program size (2235293 bytes) is greater than maximum allowed (1966080 bytes)
 
    bt stack = 2235293 - 1670941 = 551k bytes
-** settled with the following partition table  app3M_fs512k.csv 
+** use pre-defined partition 'app3M_spiffs1M_8MB.csv' 1.8M FS
+   OTA works, verified
+   but need some tweak in platform.ini (otherwise keep rebooting with unknown error),
+   and copy old littlefs image with offset (otherwise, rebooting with file system error, saw that before)
+   .   esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash 0x610000  ./release/littlefs512k.bin
+   then reformat with '$localfs/format=littlefs' in terminal
+   .   esptool.py --chip esp32 --port /dev/ttyUSB0  read_flash 0x610000 0x1F0000  littlefs2M.bin
+   .   mobe file to release/.
+   .   esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash 0x610000 ./release/littlefs2M.bin
+** [obsolete] settled with the following partition table  app3M_fs512k.csv 
    # Name,   Type, SubType, Offset,  Size, Flags
    nvs,      data, nvs,      0x9000,   0x5000,
    otadata,  data, ota,      0xe000,   0x2000,
@@ -108,4 +123,4 @@
 
 * note branch main (stale) has working u8g2 library 
 * TODO Points A==B, shold be any button or rotate dial to exit
-* git push instead of gpush
+  easily get into A==B ? needs improvement
