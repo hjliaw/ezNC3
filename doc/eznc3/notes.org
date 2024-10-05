@@ -1,0 +1,2 @@
+* wifi is not responsive in ez_menu, stay or go back to DRO (main screen) while using web ui
+* wifi client may slow down performance, disconnect if possible
