@@ -1272,7 +1272,7 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
 
             // touchedR handled by isr
             
-            if( btnClicked() ){  // auto repeat by dispatcher
+            if( btnClicked() ){  // repeat, will auto repeat by dispatcher
                 cmd_finished = true;
                 cmd_issued   = false;
                 cmd_started  = false;
@@ -1638,7 +1638,7 @@ void eznc_dispatch( void )    // top level dispatcher
 
     if( ez_run_pwrfd ){
         ez_pwr_fd();
-        return;      // not necessary (?) w.o this, canceled pwr_fd may not refresh display 
+        return;      // not necessary (?)
     }
 
     if( uimenu_active )

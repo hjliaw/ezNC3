@@ -131,12 +131,14 @@ void protocol_main_loop() {
             }
             // All systems go!
 
-            // set mark_A as power up position, may be non-zero
-            float *pos;
-            pos = get_mpos();
-            mpos_to_wpos(pos);
-            for( int i=0; i<3; i++) mark_A[i] = pos[i];
-
+            // set mark_A as power up position  (non-zero if been set-as)
+            // but only if mark_B == 0, for abort after pwr-fd
+            if( fabs(mark_B[0])<1e-4 && fabs(mark_B[1])<1e-4 ){
+                float *pos;
+                pos = get_mpos();
+                mpos_to_wpos(pos);
+                for( int i=0; i<3; i++) mark_A[i] = pos[i];
+            }
             settings_execute_startup();  // Execute startup script.
 
 
