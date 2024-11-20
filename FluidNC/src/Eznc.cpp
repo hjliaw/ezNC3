@@ -1109,13 +1109,15 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
 
     if( !ez_run_pwrfd ) return;
 
-    // called by dispatcher repeatedly
+    // called by dispatcher repeatedly, hence no dbg print here 
 
     if( cmd_cnt == 0 && sys.state == State::Idle && !cmd_issued ){  // init
         float dx, dy, dA, dB;
         dx = mark_A[0] - mark_B[0];
         dy = mark_A[1] - mark_B[1];
 
+        log_info( "PF A= " <<  mark_A[0] << ", " <<  mark_A[1] );
+        log_info( "   B= " <<  mark_B[0] << ", " <<  mark_B[1] );
         dbg_pos();
 
         // where am I, closer to mark-A or mark-B
@@ -1198,12 +1200,14 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
             sprintf( pfmsg[0], "Points A == B" );
             pfmsg[1][0] = 0;
             sprintf( pfmsg[2], "nothing to do" );
-            sprintf( pfmsg[3], "touchR to cont." );
+            sprintf( pfmsg[3], "click to cont" );
             u8g_print( pfmsg[0], pfmsg[1], pfmsg[2], pfmsg[3] );
 
-            clearBtnTouch();   // only touch-R works ? why ?
-            while( ! btnClickedRlsd() && !touched()  );
             clearBtnTouch();
+            while( (!btnClicked()) && (!touched()) )  delay(100);
+            clearBtnTouch();
+
+            ez_pwr_fd_reset();  // w/o this click or touch-L enters infinite loop
             return;
         }
 
@@ -1258,7 +1262,7 @@ void ez_pwr_fd()        // XY only, move between A/B  1d or 2d
             u8g_print( pfmsg[0], pfmsg[1], pfmsg[2], pfmsg[3] );
 
             // disable motor to allow user intervene, such as lower z-axis
-            // NOT WORKING protocol_disable_steppers();
+            // [NOT WORKING] protocol_disable_steppers();
             config->_axes->set_disable(true);
 
             clearBtnTouch();
@@ -1590,7 +1594,7 @@ void ez_dro()
     clearBtnTouch();            
 }
 
-void ez_ui()  // NOT used, current ui_menu is blocking, much easier to implement
+void ez_ui()  // NOT USED ! current ui_menu is blocking, much easier to implement
 {
     enc_cnt = readEncoder(0);
     if( enc_cnt != 0 ){
@@ -1634,7 +1638,7 @@ void eznc_dispatch( void )    // top level dispatcher
 
     if( ez_run_pwrfd ){
         ez_pwr_fd();
-        return;      // not necessary, but do it anyway
+        return;      // not necessary (?) w.o this, canceled pwr_fd may not refresh display 
     }
 
     if( uimenu_active )

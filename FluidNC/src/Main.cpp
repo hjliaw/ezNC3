@@ -57,7 +57,7 @@ eznc_t EZnc;
   #define ENCA GPIO_NUM_14
   #define ENCB GPIO_NUM_12
 #else
-  #define SW1  GPIO_NUM_34  // eznc test jig 
+  #define SW1  GPIO_NUM_34  // eznc test jig or ezNC2
   #define SWL  GPIO_NUM_32  //14 = encoder pin
   #define SWR  GPIO_NUM_33  //13
   #define ENCA GPIO_NUM_36
@@ -218,10 +218,15 @@ void setup() {
     attachInterrupt( SW1, handleInterruptSW1, FALLING );
 
     pinMode( SWL, INPUT_PULLUP);
-    attachInterrupt( SWL, handleInterruptSWL, FALLING );
-
     pinMode( SWR, INPUT_PULLUP);
+
+#ifdef BRD_EZNC2
+    touchAttachInterrupt( T8, handleInterruptSWL, 40 );   // higher threshold is more sensitive
+    touchAttachInterrupt( T9, handleInterruptSWR, 40 );   // swap R/L
+#else
+    attachInterrupt( SWL, handleInterruptSWL, FALLING );
     attachInterrupt( SWR, handleInterruptSWR, FALLING );
+#endif
 
     try {
         uartInit();       // Setup serial port
