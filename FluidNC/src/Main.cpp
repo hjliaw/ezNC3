@@ -207,7 +207,7 @@ void setup() {
     EEPROM.begin( EEP_SIZE);   // 1k, eznc starts at 0
     load_eznc_eeprom();
 
-    ESP32Encoder::useInternalWeakPullResistors= UP;
+    ESP32Encoder::useInternalWeakPullResistors= puType::up;  // old lib, just 'UP'
     pinMode( ENCA, INPUT_PULLDOWN);
     pinMode( ENCB, INPUT_PULLDOWN);
 
