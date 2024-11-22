@@ -1,16 +1,18 @@
 * frequently used commands
 * esptool format flash with littlefs (required after fresh start)
+  otherwise, esp32 in repeated re-starts, but will respond to esptool
   littlefs supports g-code in sub-directory
-** esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash 0x610000  ./release/littlefs2M.bin
+** esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash 0x610000 ./release/littlefs2M.bin
    or 
    python /home/hjack/esp32/tools/esptool/esptool.py --chip esp32 ---
    4M starts at 0x38000  (512k)
    8M now starts at 0x61000  (2M space)
-   
 *** [not required]  write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect
+** esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash 0x380000 ./release/littlefs512k.bin
 ** esptool.py --- erase_flash
 ** esptool.py --- flash_id
-** esptool.py --- read_flash 0x380000 0x80000 littlefs512k.bin
+** esptool.py --- read_flash 0x380000  0x80000 littlefs512k.bin
+** esptool.py --- read_flash 0x610000 0x1F0000 littlefs2M.bin
 * fluidnc commands
 ** $localFS/format
 ** $localFS/list
