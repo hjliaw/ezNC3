@@ -123,4 +123,11 @@
    try setting mark_A = Wpos upon power up
 
 * note branch main (stale) has working u8g2 library 
-
+* 20250927 debug with Tinybee
+** pio failed to compile, problem is in new platformio.ini (?) only tinybee is affected
+** revert platformio.ini, need to do
+    esptool.py --chip esp32 --port /dev/ttyUSB0 erase_flash
+	esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash 0x610000  ./release/littlefs2M.bin
+	[upload firmware in pio]
+** after the above fix, jogging works, but enable pin was not toggled during jogging
+   $ME (motor enable) and $MD (motor disable) work

@@ -17,11 +17,11 @@ data_dir = FluidNC/data
 
 ;extra_configs=debug.ini
 
-; brd dep encoder & button pin assignments (can it be pushed to config.yaml ?)
-
-;default_envs = ezNC_MPG
-;default_envs = ezNC2
-default_envs = ezTinybee
+; brd dep encoder & button pin assignments
+default_envs = 
+	ezNC2
+	;ezNC_MPG
+	;ezTinybee
 
 [common_env_data]
 lib_deps_builtin = 
@@ -51,16 +51,12 @@ wifi_deps =
 
 [common_esp32_base]
 platform = espressif32@^4.3.0
-
 framework = arduino
-upload_speed = 921600
 
-; set partition in different env
-;board_build.partitions = min_spiffs.csv ; For 4M ESP32
-;board_build.partitions = FluidNC/ld/esp32/app3M_fs512k.csv  ; 4M ESP32
+; note: partition table is set in env
 
 board_build.filesystem = littlefs
-
+upload_speed = 921600
 monitor_speed = 115200
 monitor_flags = 
 	--eol=LF
@@ -79,11 +75,38 @@ lib_extra_dirs =
 [common_esp32]
 ; See FluidNC/ld/esp32/README.md
 extra_scripts =	
-	pre:add_font.py
 	FluidNC/ld/esp32/vtable_in_dram.py
 
 extends = common_esp32_base
 board = esp32dev
+
+[common_eznc]
+extends = common_esp32
+extra_scripts =	pre:add_font.py
+lib_deps =
+		${common.lib_deps}
+        ${common.wifi_deps}
+		thingpulse/ESP8266 and ESP32 OLED driver for SSD1306 displays@^4.2.1
+build_flags = 
+	${common_esp32.build_flags} -DENABLE_WIFI -DINCLUDE_OLED_IO -DINCLUDE_OLED_BASIC -DUSE_LITTLEFS
+
+[env:ezTinybee]
+extends = common_eznc
+board_build.partitions = FluidNC/ld/esp32/app3M_spiffs1M_8MB.csv
+board_upload.maximum_size = 8388608
+board_upload.flash_size = 8MB
+build_flags = ${env:common_eznc.build_flags} -DBRD_TINYBEE
+	
+[env:ezNC2]
+extends = common_eznc
+board_build.partitions = FluidNC/ld/esp32/app3M_fs512k.csv
+build_flags = ${common_eznc.build_flags} -DBRD_EZNC2
+
+[env:ezNC_MPG]
+extends = common_eznc
+board_build.partitions = FluidNC/ld/esp32/app3M_fs512k.csv
+build_flags = ${common_eznc.build_flags} -DBRD_EZMPG
+
 
 [common_esp32_s2]
 extends = common_esp32_base
@@ -130,49 +153,6 @@ lib_deps =
           ${common.wifi_deps}
           thingpulse/ESP8266 and ESP32 OLED driver for SSD1306 displays@^4.2.1
 build_flags = ${common_esp32.build_flags} -DENABLE_WIFI -DINCLUDE_OLED_IO -DINCLUDE_OLED_BASIC
-
-
-[env:ezTinybee]
-board_build.filesystem = littlefs
-extends = common_esp32
-
-board_build.partitions = FluidNC/ld/esp32/app3M_spiffs1M_8MB.csv
-board_upload.maximum_size = 8388608
-board_upload.flash_size = 8MB
-
-lib_deps =
-		${common.lib_deps}
-        ${common.wifi_deps}
-		thingpulse/ESP8266 and ESP32 OLED driver for SSD1306 displays@^4.2.1
-build_flags = 
-	${common_esp32.build_flags} -DBRD_TINYBEE -DENABLE_WIFI
-	-DINCLUDE_OLED_IO -DINCLUDE_OLED_BASIC
-	-DUSE_LITTLEFS
-
-[env:ezNC2]
-extends = common_esp32
-board_build.partitions = FluidNC/ld/esp32/app3M_fs512k.csv  ; 4M ESP32
-
-lib_deps =
-		${common.lib_deps}
-        ${common.wifi_deps}
-		thingpulse/ESP8266 and ESP32 OLED driver for SSD1306 displays@^4.2.1
-build_flags = 
-	${common_esp32.build_flags} -DBRD_EZNC2 -DENABLE_WIFI
-	-DINCLUDE_OLED_IO -DINCLUDE_OLED_BASIC
-	-DUSE_LITTLEFS
-
-[env:ezNC_MPG]
-board_build.filesystem = littlefs
-extends = common_esp32
-lib_deps =
-		${common.lib_deps}
-        ${common.wifi_deps}
-		thingpulse/ESP8266 and ESP32 OLED driver for SSD1306 displays@^4.2.1
-build_flags = 
-	${common_esp32.build_flags} -DBRD_EZMPG -DENABLE_WIFI
-	-DINCLUDE_OLED_IO -DINCLUDE_OLED_BASIC
-	-DUSE_LITTLEFS
 
 [env:wifi-littlefs]
 board_build.filesystem = littlefs
