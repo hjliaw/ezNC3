@@ -189,8 +189,8 @@ void load_eznc_eeprom()
     if( EZnc.Unit > 1 || EZnc.FlipScreen > 1 || EZnc.UiEncDir  > 1 
         || EZnc.tool_dia > 100.0 || EZnc.tool_dia < 0.1 ){
 
-        EZnc.Unit = 1;   // 1=G21=metric
-        EZnc.FlipScreen = 0;
+        EZnc.Unit = 1;       // 1=G21=metric
+        EZnc.FlipScreen = 1;
         EZnc.UiEncDir = 1;
 
         EZnc.jog_speed = 150.0;
