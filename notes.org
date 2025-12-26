@@ -78,7 +78,9 @@
    app1,     app,  ota_1,  0x370000,  0x10000,
    spiffs,   data, spiffs, 0x380000,  0x80000,
 ** read fs
-   python /home/hjack/esp32/tools/esptool/esptool.py --chip esp32 --port /dev/ttyUSB0  read_flash 0x380000 0x80000 littlefs512k.bin
+   esptool.py --chip esp32 --port /dev/ttyUSB0  read_flash 0x380000 0x80000 littlefs512k.bin
+   or
+   esptool.py --chip esp32 --port /dev/ttyUSB0  read_flash 0x610000 0x1F0000 littlefs2M.bin
 ** write fs
 *** install esptool with pip
 	sudo pip install esptool
@@ -86,6 +88,8 @@
    python /home/hjack/esp32/tools/esptool/esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash 0x380000  ./release/littlefs512k.bin
    or
    esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash 0x380000  ./release/littlefs512k.bin
+
+   esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash 0x610000  ./release/littlefs2M.bin
 
    [options?] write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect 
 
