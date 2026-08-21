@@ -29,3 +29,4 @@ v*.zip
 build/
 dist/
 *.log
+*.bin

@@ -56,6 +56,12 @@ eznc_t EZnc;
   #define SWR  GPIO_NUM_34    // TH2, need to shift jumper
   #define ENCA GPIO_NUM_14
   #define ENCB GPIO_NUM_12
+#elif BRD_RODENT
+  #define SW1  GPIO_NUM_34    // Y-lim
+  #define SWL  GPIO_NUM_33    // Z
+  #define SWR  GPIO_NUM_32    // A 
+  #define ENCA GPIO_NUM_16    // RXD  spindle
+  #define ENCB GPIO_NUM_15    // TXD
 #else
   #define SW1  GPIO_NUM_34  // eznc test jig or ezNC2
   #define SWL  GPIO_NUM_32  //14 = encoder pin

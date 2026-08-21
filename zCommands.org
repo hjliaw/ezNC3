@@ -1,0 +1,86 @@
+* not tracked by git, commands used across revisions
+* git checkout tinybee      go back to latest branch
+* esp32 encoder pull up error (due to lib difference)
+  #210 Main.cpp         UP -> puType::up;
+* fluidnc commands list from "$cmd"
+$FakeLaserMode       or $32
+$FakeMaxSpindleSpeed or $30
+$Startup/Show        or $SS
+$Settings/Restore    or $RST
+$GCode/StartupLines  or $N
+$Build/Info          or $I
+$System/Sleep        or $SLP
+$Home/C or $HC
+$Home/B or $HB
+$Home/A or $HA
+$Home/Z or $HZ
+$Home/Y or $HY
+$Home/X or $HX
+$Macros/Run          or $RM
+$Motors/Init         or $MI
+$Motor/Enable        or $ME
+$Motor/Disable       or $MD
+$Home                or $H
+$GCode/Offsets       or $#
+$Settings/Stats      or $V
+$Settings/Erase      or $NVX
+$Alarm/Disable       or $X
+$GCode/Check         or $C
+$GCode/Modes         or $G
+$Errors/List         or $E
+$Alarms/List         or $A
+$Commands/List       or $CMD
+$Settings/ListChanged or $SC
+$Settings/List       or $S
+$Limits/Show         or $Limits
+$GrblNames/List      or $L
+$GrblSettings/List   or $$
+$Jog                 or $J
+$State               or $T
+$Help                or $
+$Config/Dump         or $CD
+$Xmodem/Send         or $XS
+$Xmodem/Receive      or $XR
+$Channel/Info        or $CI
+$GPIO/Dump           or $GD
+$WebUI/Help          or $ESP
+$WebUI/Help          or $ESP0
+$WebUI/List          or $ESP400
+$WebUI/Set           or $ESP401 =P=position T=type V=value
+$Radio/State         or $ESP115 =ON|OFF
+$SD/Status           or $ESP200
+$SD/List             or $ESP210
+$SD/Delete           or $ESP215 =file_or_directory_path
+$SD/Run              or $ESP220 =path
+$SD/Show             or $ESP221 =path
+$LocalFS/Migrate =path
+$LocalFS/Restore =path
+$LocalFS/Backup =path
+$LocalFS/Delete =path
+$LocalFS/List =path
+$LocalFS/Run         or $ESP700 =path
+$LocalFS/Show        or $ESP701 =path
+$LocalFS/Format      or $ESP710 =FORMAT
+$LocalFS/Size        or $ESP720
+
+$Bye =RESTART
+$System/Control      or $ESP444 =RESTART
+$System/Stats        or $ESP420
+$Firmware/Info       or $ESP800
+$Notification/Send   or $ESP600 =message
+$Notification/Setup  or $ESP610 =TYPE=NONE|PUSHOVER|EMAIL|LINE T1=token1 T2=token2 TS=settings
+$Sta/Setup           or $ESP103 =IP=ipaddress MSK=netmask GW=gateway
+$System/IP           or $ESP111
+$WiFi/ListAPs        or $ESP410
+* esptool.py erase_flash
+* esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash 0x610000  release/littlefs2M.bin
+  for tinybee (8M flash)
+* esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash 0x380000  release/littlefs512k.bin
+  for ezNC (4M flash) partition 3M_fs512k, no OTA
+* esptool.py --chip esp32 --port /dev/ttyUSB0 \
+  --baud 921600 --before default_reset --after hard_reset write_flash -z \
+  --flash_mode dio --flash_freq 80m --flash_size 8MB \
+  0x1000   ezNC3_bootloader_dio_80m.bin \
+  0x8000   ezNC3_partition.bin          \
+  0xe000   ezNC3_boot_app0.bin          \
+  0x10000  ezNC3_xxxx.bin

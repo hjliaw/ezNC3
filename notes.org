@@ -34,7 +34,8 @@
    [TBV] with my old frozen fluidnc, does wifi update work ?
 ** DONE pwm with gpio.22:low works in latest fluidnc, but not the one I branched off
    however, work-around with negative slope works as well
-   both have same quirk: if motor switch is on, power on motor w/o eznc will have motor running 
+   both have same quirk: if motor switch is on, power on motor w/o eznc will have motor running
+   this seems to be enough reason to add an inverter
 * auto init littlefs doens't work ?
   had to use '$localfs/format=littlefs' to format
   and manually copy files over, needs improvement
@@ -98,7 +99,7 @@
 ** SDDET /TH2 should be in TH2 position, otherwise right (red) button doesn't work
 ** gpio 34-39 are input only, set as pwm out can cause 'panic', need to erase flash and re-load good yaml 
 ** I2So can not do pwm in fluidnc
-** TB(white)=main switch, TH1(black)=SW-L, TH2(purple)=SW-R/Cancel, needs jumper change
+** TB(white)=main switch, TH1(black)=SW-L, TH2(purple)=SW-R/Cancel, needs SDDET/TH2 jumper on TH2
 ** J1-MPG, most MPGs work at 3.3V, but some may need 5v, which needs PCB solder change
 ** available gpio: X/Y/Z limits, MT_DET, 3DTouch, I2So: FAN1, FAN2, BEEPER, HE1, HE0, HBED
 ** sorted out BTN_EN1 (R2) and LCD_CLK (R3) to gpio-14 connection
@@ -135,3 +136,24 @@
 	[upload firmware in pio]
 ** after the above fix, jogging works, but enable pin was not toggled during jogging
    $ME (motor enable) and $MD (motor disable) work
+* command line fw update [NOT WORKING?]
+
+** orig  
+  /home/hjack/.platformio/penv/bin/python /home/hjack/.platformio/packages/tool-esptoolpy@1.30300.0/esptool.py
+  --chip esp32 --port /dev/ttyUSB0 --baud 921600 --before default_reset --after hard_reset write_flash -z 
+  --flash_mode dio --flash_freq 80m --flash_size 8MB 
+  0x1000 
+  /home/hjack/.platformio/packages/framework-arduinoespressif32@3.20003.220626/tools/sdk/esp32/bin/bootloader_dio_80m.bin 
+  0x8000
+  /home/hjack/cnc/eFNC/.pio/build/ezTinybee/partitions.bin 
+  0xe000
+  /home/hjack/.platformio/packages/framework-arduinoespressif32@3.20003.220626/tools/partitions/boot_app0.bin 
+  0x10000
+  .pio/build/ezTinybee/firmware.bin
+** simplified
+   esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 921600 --before default_reset --after hard_reset write_flash -z \
+   --flash_mode dio --flash_freq 80m --flash_size 8MB \
+    0x1000  ezNC3_bootloader_dio_80m.bin \
+    0x8000  ezNC3_partition.bin          \
+    0xe000  ezNC3_boot_app0.bin          \
+   0x10000  ezNC3_xxxx.bin

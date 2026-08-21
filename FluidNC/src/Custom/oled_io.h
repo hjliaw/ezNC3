@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef BRD_EZNC2
+#if defined(BRD_EZNC2) || defined (BRD_RODENT)
     #include <SSD1306Wire.h>
     extern SSD1306Wire* oled;
 #else

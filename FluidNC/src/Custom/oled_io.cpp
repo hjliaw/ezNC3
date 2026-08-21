@@ -33,7 +33,7 @@ void init_oled(uint8_t address, pinnum_t sda_gpio, pinnum_t scl_gpio, OLEDDISPLA
 
 // TODO: should let user define DISPLAY instead of by board
 
-#if defined(BRD_EZMPG)  || defined (BRD_DLC32) || defined (BRD_TINYBEE)
+#if defined(BRD_EZMPG)  || defined (BRD_DLC32) || defined (BRD_TINYBEE)  //|| defined (BRD_RODENT)
     oled = new SH1106Wire(address, sda_gpio, scl_gpio, geometry, I2C_ONE, 400000);
 #else
     oled = new SSD1306Wire(address, sda_gpio, scl_gpio, geometry, I2C_ONE, 400000);
