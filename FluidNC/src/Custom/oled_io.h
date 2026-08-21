@@ -1,12 +1,12 @@
 #pragma once
 
-#if defined(BRD_EZNC2) || defined (BRD_RODENT)
-    #include <SSD1306Wire.h>
-    extern SSD1306Wire* oled;
-#else
-    #include <SH1106Wire.h>
-    extern SH1106Wire* oled;
-#endif
+#include "BoardConfig.h"
+// Both driver headers are included unconditionally (rather than via a
+// computed OLED_DRIVER_HEADER macro) so PlatformIO's Library Dependency
+// Finder can statically detect them and pull in their dependencies (e.g. Wire).
+#include <SH1106Wire.h>
+#include <SSD1306Wire.h>
+extern OLED_DRIVER_TYPE* oled;
 
 extern volatile int updateoled;
 

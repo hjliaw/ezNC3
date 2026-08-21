@@ -38,37 +38,7 @@ ESP32Encoder encUI;
 #include "Eznc.h"
 eznc_t EZnc;
 
-#ifdef BRD_DLC32
-  #define SW1  GPIO_NUM_36     // X
-  #define SWL  GPIO_NUM_35     // Y
-  #define SWR  GPIO_NUM_34     // Z
-  #define ENCA GPIO_NUM_22     // probe-pin brd v2.1
-  #define ENCB GPIO_NUM_33     // LCD_RS
-#elif BRD_EZMPG
-  #define SW1  GPIO_NUM_34 
-  #define SWL  GPIO_NUM_33     // undo old lib mix up
-  #define SWR  GPIO_NUM_32
-  #define ENCA GPIO_NUM_36
-  #define ENCB GPIO_NUM_39
-#elif BRD_TINYBEE
-  #define SW1  GPIO_NUM_39    // TB
-  #define SWL  GPIO_NUM_36    // TH1
-  #define SWR  GPIO_NUM_34    // TH2, need to shift jumper
-  #define ENCA GPIO_NUM_14
-  #define ENCB GPIO_NUM_12
-#elif BRD_RODENT
-  #define SW1  GPIO_NUM_34    // Y-lim
-  #define SWL  GPIO_NUM_33    // Z
-  #define SWR  GPIO_NUM_32    // A 
-  #define ENCA GPIO_NUM_16    // RXD  spindle
-  #define ENCB GPIO_NUM_15    // TXD
-#else
-  #define SW1  GPIO_NUM_34  // eznc test jig or ezNC2
-  #define SWL  GPIO_NUM_32  //14 = encoder pin
-  #define SWR  GPIO_NUM_33  //13
-  #define ENCA GPIO_NUM_36
-  #define ENCB GPIO_NUM_39
-#endif
+#include "Custom/BoardConfig.h"
 
 volatile int clickCounterSW1 = 0;
 volatile int touchedL = 0;

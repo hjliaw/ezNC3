@@ -317,15 +317,7 @@ static void oledUpdateOLD(void* pvParameters) {
 #endif
 
 void display_init() {
-#if defined(BRD_DLC32)
-    init_oled(0x3c, GPIO_NUM_0, GPIO_NUM_4, GEOMETRY_128_64);
-#elif defined(BRD_TINYBEE)
-    init_oled(0x3c, GPIO_NUM_16, GPIO_NUM_17, GEOMETRY_128_64);
-#elif defined(BRD_RODENT)
-    init_oled(0x3c, GPIO_NUM_27, GPIO_NUM_26, GEOMETRY_128_64);
-#else
-    init_oled(0x3c, GPIO_NUM_21, GPIO_NUM_22, GEOMETRY_128_64);  // ezNC/MPG
-#endif
+    init_oled(OLED_ADDR, OLED_SDA, OLED_SCL, OLED_GEOMETRY);
 
     if( EZnc.FlipScreen)
         oled->flipScreenVertically();
