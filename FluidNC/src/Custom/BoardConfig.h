@@ -49,7 +49,7 @@
     #define ENC_PULL_MODE  INPUT_PULLDOWN
     #define ENC_PULL_TYPE  puType::down
 #elif defined(BRD_RODENT)
-    #define OLED_DRIVER_TYPE    SSD1306Wire
+    #define OLED_DRIVER_TYPE    SH1106Wire  // #define OLED_DRIVER_TYPE    SSD1306Wire
     #define OLED_ADDR           0x3c
     #define OLED_SDA            GPIO_NUM_27
     #define OLED_SCL            GPIO_NUM_26
