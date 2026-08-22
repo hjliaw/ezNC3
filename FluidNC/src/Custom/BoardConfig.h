@@ -18,6 +18,8 @@
     #define SWR  GPIO_NUM_34     // Z
     #define ENCA GPIO_NUM_22     // probe-pin brd v2.1
     #define ENCB GPIO_NUM_33     // LCD_RS
+    #define ENC_PULL_MODE  INPUT_PULLDOWN
+    #define ENC_PULL_TYPE  puType::down
 #elif defined(BRD_EZMPG)
     #define OLED_DRIVER_TYPE    SH1106Wire
     #define OLED_ADDR           0x3c
@@ -30,6 +32,8 @@
     #define SWR  GPIO_NUM_32
     #define ENCA GPIO_NUM_36
     #define ENCB GPIO_NUM_39
+    #define ENC_PULL_MODE  INPUT_PULLDOWN
+    #define ENC_PULL_TYPE  puType::down
 #elif defined(BRD_TINYBEE)
     #define OLED_DRIVER_TYPE    SH1106Wire
     #define OLED_ADDR           0x3c
@@ -42,6 +46,8 @@
     #define SWR  GPIO_NUM_34    // TH2, need to shift jumper
     #define ENCA GPIO_NUM_14
     #define ENCB GPIO_NUM_12
+    #define ENC_PULL_MODE  INPUT_PULLDOWN
+    #define ENC_PULL_TYPE  puType::down
 #elif defined(BRD_RODENT)
     #define OLED_DRIVER_TYPE    SSD1306Wire
     #define OLED_ADDR           0x3c
@@ -49,11 +55,13 @@
     #define OLED_SCL            GPIO_NUM_26
     #define OLED_GEOMETRY       GEOMETRY_128_64
 
-    #define SW1  GPIO_NUM_34    // Y-lim
-    #define SWL  GPIO_NUM_33    // Z
-    #define SWR  GPIO_NUM_32    // A
-    #define ENCA GPIO_NUM_16    // RXD  spindle
-    #define ENCB GPIO_NUM_15    // TXD
+    #define SW1  GPIO_NUM_14    // Dir
+    #define SWL  GPIO_NUM_25    // Spindle
+    #define SWR  GPIO_NUM_15    // Dpindle
+    #define ENCA GPIO_NUM_32    // E0
+    #define ENCB GPIO_NUM_39    // E1-lim  doc error
+    #define ENC_PULL_MODE  INPUT_PULLUP
+    #define ENC_PULL_TYPE  puType::up
 #elif defined(BRD_EZNC2)
     #define OLED_DRIVER_TYPE    SSD1306Wire
     #define OLED_ADDR           0x3c
@@ -66,6 +74,8 @@
     #define SWR  GPIO_NUM_33  //13
     #define ENCA GPIO_NUM_36
     #define ENCB GPIO_NUM_39
+    #define ENC_PULL_MODE  INPUT_PULLDOWN
+    #define ENC_PULL_TYPE  puType::down
 #else
     #define OLED_DRIVER_TYPE    SSD1306Wire
     #define OLED_ADDR           0x3c
@@ -78,4 +88,6 @@
     #define SWR  GPIO_NUM_33  //13
     #define ENCA GPIO_NUM_36
     #define ENCB GPIO_NUM_39
+    #define ENC_PULL_MODE  INPUT_PULLDOWN
+    #define ENC_PULL_TYPE  puType::down
 #endif

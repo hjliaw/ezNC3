@@ -183,9 +183,9 @@ void setup() {
     EEPROM.begin( EEP_SIZE);   // 1k, eznc starts at 0
     load_eznc_eeprom();
 
-    ESP32Encoder::useInternalWeakPullResistors= puType::up;  // old lib, just 'UP'
-    pinMode( ENCA, INPUT_PULLDOWN);
-    pinMode( ENCB, INPUT_PULLDOWN);
+    ESP32Encoder::useInternalWeakPullResistors = ENC_PULL_TYPE;
+    pinMode( ENCA, ENC_PULL_MODE);
+    pinMode( ENCB, ENC_PULL_MODE);
 
     encUI.clearCount();
     encUI.attachHalfQuad( ENCA, ENCB );
