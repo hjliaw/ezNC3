@@ -55,9 +55,9 @@
     #define OLED_SCL            GPIO_NUM_26
     #define OLED_GEOMETRY       GEOMETRY_128_64
 
-    #define SW1  GPIO_NUM_14    // Dir
-    #define SWL  GPIO_NUM_25    // Spindle
-    #define SWR  GPIO_NUM_15    // Dpindle
+    #define SW1  GPIO_NUM_35    // Dir
+    #define SWL  GPIO_NUM_34    // Spindle
+    #define SWR  GPIO_NUM_33    // Dpindle
     #define ENCA GPIO_NUM_32    // E0
     #define ENCB GPIO_NUM_39    // E1-lim  doc error
     #define ENC_PULL_MODE  INPUT_PULLUP
